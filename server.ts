@@ -2428,21 +2428,20 @@ app.post('/api/v1/performance/assessment-result', authenticateOfficial, (req, re
 });
 
 // Dev vs Production Vite mounting
-if (process.env.NODE_ENV !== 'production') {
-  const { createServer: createViteServer } = await import('vite');
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: 'spa',
-  });
-  app.use(vite.middlewares);
-} else {
-  app.use(express.static(path.resolve(__dirname, 'dist')));
-  app.get('*', (_req, res) => {
-    res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
-  });
+if (process.env.NODE_ENV === 'development') {
+  try {
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } catch (e) {
+    console.warn('Vite dev middleware not loaded:', e);
+  }
 }
 
-if (process.env.NODE_ENV !== 'test') {
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
   app.listen(port, '0.0.0.0', () => {
     console.log(`Server listening on http://localhost:${port}`);
   });
