@@ -12,9 +12,9 @@
  * - Gemini AI enrichment when available with zero external API hard-dependency
  */
 
-import { skillGapStore, SkillGapRecord, GapPriority } from './skillGapStore.js';
-import { competencyStore, CompetencyDomain } from './competencyStore.js';
-import { profileStore } from './profileStore.js';
+import { skillGapStore, SkillGapRecord, GapPriority } from './skillGapStore';
+import { competencyStore, CompetencyDomain } from './competencyStore';
+import { profileStore } from './profileStore';
 
 export type ResourceProvider = 'iGOT Karmayogi' | 'NSSTA' | 'TPAC' | 'Platform Content';
 export type ResourceType = 'Interactive Course' | 'Micro-Learning' | 'Executive Briefing' | 'Case Study' | 'Handbook';

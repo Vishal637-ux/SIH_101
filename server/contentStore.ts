@@ -18,9 +18,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import { PDFParse } from 'pdf-parse';
-import { learningStore } from './learningStore.js';
-import { profileStore } from './profileStore.js';
+import { learningStore } from './learningStore';
+import { profileStore } from './profileStore';
 
 export type ContentType = 'PDF' | 'PPT' | 'VIDEO' | 'DOCUMENT';
 export type ContentStatus = 'UPLOADED' | 'PROCESSING' | 'READY' | 'PUBLISHED' | 'ARCHIVED' | 'FAILED';
@@ -575,14 +574,12 @@ The United Nations Fundamental Principles of Official Statistics and the MoSPI N
 
       if (item.content_type === 'PDF') {
         try {
-          const parser = new PDFParse({ data: fileBuffer });
-          const textResult = await parser.getText();
-          rawText = textResult.text || '';
-          pageCount = textResult.pages?.length || 1;
-          await parser.destroy();
+          const pdfParse = (await import('pdf-parse')).default;
+          const parsed = await pdfParse(fileBuffer);
+          rawText = parsed.text || fileBuffer.toString('utf-8');
+          pageCount = parsed.numpages || 1;
           job.logs.push(`Extracted ${rawText.length} characters across ${pageCount} PDF pages.`);
         } catch (pdfErr: any) {
-          // If binary PDF parsing failed, check if plain text
           rawText = fileBuffer.toString('utf-8');
           job.logs.push(`Fallback text buffer read: ${rawText.length} characters.`);
         }

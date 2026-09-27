@@ -14,14 +14,14 @@
  */
 
 import { GoogleGenAI, Type } from '@google/genai';
-import { contentStore, AssessmentDocket } from './contentStore.js';
+import { contentStore, AssessmentDocket } from './contentStore';
 import { 
   assessmentStore, 
   Assessment, 
   AssessmentQuestion, 
   AssessmentDifficulty,
   QuestionValidationStatus
-} from './assessmentStore.js';
+} from './assessmentStore';
 
 export interface GenerateAssessmentParams {
   contentId: string;

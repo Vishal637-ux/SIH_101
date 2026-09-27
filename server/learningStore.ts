@@ -13,9 +13,9 @@
  * - Grounded civil service AI learning assistant
  */
 
-import { recommendationStore, LearningResource } from './recommendationStore.js';
-import { integrationStore, NormalizedLearningResource, IntegrationSource } from './integrationStore.js';
-import { profileStore } from './profileStore.js';
+import { recommendationStore, LearningResource } from './recommendationStore';
+import { integrationStore, NormalizedLearningResource, IntegrationSource } from './integrationStore';
+import { profileStore } from './profileStore';
 
 export type LearningStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
 

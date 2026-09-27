@@ -14,8 +14,8 @@
  * - Source content traceability: Linking back to Module 08 content_id and sections
  */
 
-import { contentStore } from './contentStore.js';
-import { competencyStore } from './competencyStore.js';
+import { contentStore } from './contentStore';
+import { competencyStore } from './competencyStore';
 
 export type AssessmentStatus = 'DRAFT' | 'REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 export type QuestionValidationStatus = 'VALID' | 'WARNING' | 'REJECTED';

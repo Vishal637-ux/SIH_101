@@ -15,17 +15,17 @@ const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: '15mb' }));
 
-import { profileStore } from './server/profileStore.js';
-import { competencyStore } from './server/competencyStore.js';
-import { skillGapStore } from './server/skillGapStore.js';
-import { recommendationStore } from './server/recommendationStore.js';
-import { integrationStore } from './server/integrationStore.js';
-import { governmentSsoAdapter } from './server/integrations/ssoAdapter.js';
-import { learningStore } from './server/learningStore.js';
-import { contentStore } from './server/contentStore.js';
-import { assessmentStore } from './server/assessmentStore.js';
-import { aiAssessmentService } from './server/aiAssessmentService.js';
-import { performanceStore } from './server/performanceStore.js';
+import { profileStore } from './server/profileStore';
+import { competencyStore } from './server/competencyStore';
+import { skillGapStore } from './server/skillGapStore';
+import { recommendationStore } from './server/recommendationStore';
+import { integrationStore } from './server/integrationStore';
+import { governmentSsoAdapter } from './server/integrations/ssoAdapter';
+import { learningStore } from './server/learningStore';
+import { contentStore } from './server/contentStore';
+import { assessmentStore } from './server/assessmentStore';
+import { aiAssessmentService } from './server/aiAssessmentService';
+import { performanceStore } from './server/performanceStore';
 import multer from 'multer';
 
 const uploadMiddleware = multer({

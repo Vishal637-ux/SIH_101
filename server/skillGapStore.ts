@@ -13,8 +13,8 @@
  * - Strict RBAC and zero mock/fake numbers
  */
 
-import { competencyStore, CompetencyDomain } from './competencyStore.js';
-import { profileStore } from './profileStore.js';
+import { competencyStore, CompetencyDomain } from './competencyStore';
+import { profileStore } from './profileStore';
 
 export type GapPriority = 'High' | 'Medium' | 'Low' | 'None';
 export type GapSeverity = 'Critical' | 'High' | 'Moderate' | 'Minor' | 'None';

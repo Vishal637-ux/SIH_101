@@ -14,10 +14,10 @@
  * - Role-based authorization & multi-learner inspection for Trainers/Admins
  */
 
-import { learningStore, LearningProgressRecord, LearningHistoryRecord } from './learningStore.js';
-import { assessmentStore, AssessmentAttempt } from './assessmentStore.js';
-import { competencyStore } from './competencyStore.js';
-import { profileStore } from './profileStore.js';
+import { learningStore, LearningProgressRecord, LearningHistoryRecord } from './learningStore';
+import { assessmentStore, AssessmentAttempt } from './assessmentStore';
+import { competencyStore } from './competencyStore';
+import { profileStore } from './profileStore';
 
 export interface CompetencyEvidenceRecord {
   id: string;

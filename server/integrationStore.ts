@@ -12,12 +12,12 @@
  * - Providing normalized learning catalog directly to Module 05 & Module 07
  */
 
-import { igotClient } from './integrations/igotClient.js';
-import { nsstaClient } from './integrations/nsstaClient.js';
-import { tpacClient } from './integrations/tpacClient.js';
-import { governmentSsoAdapter } from './integrations/ssoAdapter.js';
-import { CompetencyDomain } from './competencyStore.js';
-import { profileStore } from './profileStore.js';
+import { igotClient } from './integrations/igotClient';
+import { nsstaClient } from './integrations/nsstaClient';
+import { tpacClient } from './integrations/tpacClient';
+import { governmentSsoAdapter } from './integrations/ssoAdapter';
+import { CompetencyDomain } from './competencyStore';
+import { profileStore } from './profileStore';
 
 export type IntegrationSource = 'IGOT' | 'NSSTA' | 'TPAC' | 'INTERNAL';
 export type IntegrationStatus = 'CONNECTED' | 'DEMO_MODE' | 'NOT_CONFIGURED' | 'ERROR';
