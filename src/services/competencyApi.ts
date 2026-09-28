@@ -8,12 +8,17 @@ import {
 } from '../types';
 
 function getAuthHeaders(userId?: string): HeadersInit {
-  const currentUserId = userId || localStorage.getItem('sih_active_user_id') || 'off-001';
-  return {
+  const token = localStorage.getItem('pradnyasetu_auth_token') || '';
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${currentUserId}`,
-    'x-user-id': currentUserId,
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (userId) {
+    headers['x-user-id'] = userId;
+  }
+  return headers;
 }
 
 export const competencyApi = {
@@ -104,6 +109,27 @@ export const competencyApi = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Failed to initialize assessment session');
+    }
+    return res.json();
+  },
+
+  // 5b. POST /api/v1/competency-assessments (Domain specific)
+  async startDomainAssessment(
+    domain: 'Statistical' | 'Technical' | 'Digital Governance' | 'Behavioural / Managerial',
+    userId?: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    session: AssessmentSession;
+  }> {
+    const res = await fetch('/api/v1/competency-assessments', {
+      method: 'POST',
+      headers: getAuthHeaders(userId),
+      body: JSON.stringify({ domain, assessmentType: 'MODULE_EVALUATION' }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to start ${domain} assessment session`);
     }
     return res.json();
   },

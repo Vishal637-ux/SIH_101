@@ -23,52 +23,60 @@ import { integrationStore } from './server/integrationStore';
 import { governmentSsoAdapter } from './server/integrations/ssoAdapter';
 import { learningStore } from './server/learningStore';
 import { contentStore } from './server/contentStore';
-import { assessmentStore } from './server/assessmentStore';
+import { assessmentStore, AssessmentAttempt } from './server/assessmentStore';
 import { aiAssessmentService } from './server/aiAssessmentService';
 import { performanceStore } from './server/performanceStore';
 import multer from 'multer';
+
+import { authStore, generateToken, verifyToken, verifyPassword } from './server/authStore';
 
 const uploadMiddleware = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 });
 
-// Authentication middleware for official user context with RBAC (Module 01 & 08 integration)
+// Authentication middleware for official user context with RBAC & JWT verification
 function authenticateOfficial(req: express.Request, res: express.Response, next: express.NextFunction) {
   const authHeader = req.headers.authorization;
-  let userId = '';
+  let token = '';
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    userId = authHeader.substring(7).trim();
-  } else if (req.headers['x-user-id']) {
-    userId = String(req.headers['x-user-id']).trim();
+    token = authHeader.substring(7).trim();
   }
 
-  // Graceful fallback to default official session
-  if (!userId) {
-    userId = 'off-001';
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload) {
+      (req as any).user = {
+        id: payload.userId,
+        email: payload.email,
+        fullName: payload.fullName,
+        role: payload.role,
+      };
+      return next();
+    }
   }
 
-  // Role resolution: Trainer, Admin, or Learner
-  let role: 'Trainer' | 'Admin' | 'Learner' = 'Trainer';
-  const headerRole = req.headers['x-user-role'] ? String(req.headers['x-user-role']).trim() : '';
-
-  if (headerRole) {
-    if (headerRole.toLowerCase() === 'trainer') role = 'Trainer';
-    else if (headerRole.toLowerCase() === 'admin') role = 'Admin';
-    else if (headerRole.toLowerCase() === 'learner') role = 'Learner';
-  } else if (userId === 'trainer-001' || userId.includes('trainer')) {
-    role = 'Trainer';
-  } else if (userId === 'admin-001' || userId.includes('admin')) {
-    role = 'Admin';
-  } else {
-    // In prototype, default active official has Trainer privileges for content management unless explicitly set to Learner
-    role = 'Trainer';
+  // Check fallback for dev IDs or headers if provided (e.g. x-user-id)
+  const headerUserId = req.headers['x-user-id'] ? String(req.headers['x-user-id']).trim() : (token || '');
+  if (headerUserId) {
+    const foundUser = authStore.findUserById(headerUserId);
+    if (foundUser) {
+      (req as any).user = {
+        id: foundUser.id,
+        email: foundUser.email,
+        fullName: foundUser.fullName,
+        role: foundUser.role,
+      };
+      return next();
+    }
   }
 
+  // Fallback for demo session compatibility
+  const fallbackRole = req.headers['x-user-role'] ? String(req.headers['x-user-role']).trim() : 'Learner';
   (req as any).user = {
-    id: userId,
-    role,
+    id: 'off-001',
+    role: fallbackRole === 'Admin' ? 'Admin' : (fallbackRole === 'Trainer' ? 'Trainer' : 'Learner'),
   };
   next();
 }
@@ -87,6 +95,204 @@ function requireRole(allowedRoles: string[]) {
   };
 }
 
+// ============================================================================
+// PHASE 1: AUTHENTICATION API ENDPOINTS (Register, Login, Me)
+// ============================================================================
+
+// 1. POST /api/v1/auth/register
+app.post('/api/v1/auth/register', (req, res) => {
+  try {
+    const { fullName, email, password, confirmPassword, role } = req.body;
+
+    if (!fullName || !fullName.trim()) {
+      return res.status(400).json({ success: false, message: 'Full Name is required.' });
+    }
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email address is required.' });
+    }
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Password is required.' });
+    }
+    if (!confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Confirm Password is required.' });
+    }
+    if (!role) {
+      return res.status(400).json({ success: false, message: 'Role selection is required.' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Password and Confirm Password do not match.' });
+    }
+
+    const normalizedRole = String(role).trim().toLowerCase();
+    if (normalizedRole.includes('admin')) {
+      return res.status(400).json({ success: false, message: 'Registration as Administrator is not permitted.' });
+    }
+
+    let targetRole: 'Learner' | 'Trainer' = 'Learner';
+    if (normalizedRole === 'trainer' || normalizedRole.includes('trainer')) {
+      targetRole = 'Trainer';
+    } else if (normalizedRole === 'learner' || normalizedRole.includes('official') || normalizedRole.includes('learner')) {
+      targetRole = 'Learner';
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid role selected. Choose Learner or Trainer.' });
+    }
+
+    const newUser = authStore.createUser({
+      fullName: fullName.trim(),
+      email: email.trim(),
+      password,
+      role: targetRole,
+    });
+
+    const token = generateToken(newUser);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Account registered successfully.',
+      token,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        fullName: newUser.fullName,
+        role: newUser.role,
+      },
+    });
+  } catch (err: any) {
+    return res.status(400).json({
+      success: false,
+      message: err?.message || 'Registration failed.',
+    });
+  }
+});
+
+// 2. POST /api/v1/auth/login
+app.post('/api/v1/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email address is required.' });
+    }
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Password is required.' });
+    }
+
+    const user = authStore.findUserByEmail(email.trim());
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    const isMatch = verifyPassword(password, user.passwordHash, user.salt);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    const token = generateToken(user);
+
+    return res.json({
+      success: true,
+      message: 'Login successful.',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      },
+    });
+  } catch (err: any) {
+    return res.status(400).json({
+      success: false,
+      message: err?.message || 'Login failed.',
+    });
+  }
+});
+
+// 3. POST /api/v1/auth/google - Continue with Google Authentication
+app.post('/api/v1/auth/google', (req, res) => {
+  try {
+    const { email, fullName, role } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Google authentication requires a valid email address.' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ success: false, message: 'Invalid email address provided by Google.' });
+    }
+
+    const normalizedRole = String(role || 'Learner').trim().toLowerCase();
+    if (normalizedRole.includes('admin')) {
+      return res.status(400).json({ success: false, message: 'Registration as Administrator is not permitted via Google OAuth.' });
+    }
+
+    let targetRole: 'Learner' | 'Trainer' = 'Learner';
+    if (normalizedRole === 'trainer' || normalizedRole.includes('trainer')) {
+      targetRole = 'Trainer';
+    }
+
+    const user = authStore.findOrCreateGoogleUser({
+      email: email.trim(),
+      fullName: fullName || email.trim().split('@')[0],
+      role: targetRole,
+    });
+
+    const token = generateToken(user);
+
+    return res.json({
+      success: true,
+      message: 'Authenticated successfully with Google.',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      },
+    });
+  } catch (err: any) {
+    return res.status(400).json({
+      success: false,
+      message: err?.message || 'Google authentication failed.',
+    });
+  }
+});
+
+// 3. GET /api/v1/auth/me
+app.get('/api/v1/auth/me', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'No authentication token provided.' });
+  }
+
+  const token = authHeader.substring(7).trim();
+  const payload = verifyToken(token);
+  if (!payload) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired session token.' });
+  }
+
+  return res.json({
+    success: true,
+    user: {
+      id: payload.userId,
+      email: payload.email,
+      fullName: payload.fullName,
+      role: payload.role,
+    },
+  });
+});
+
 // Initialize Gemini client server-side
 const geminiApiKey = process.env.GEMINI_API_KEY;
 let ai: GoogleGenAI | null = null;
@@ -102,72 +308,103 @@ if (geminiApiKey) {
 }
 
 // ============================================================================
-// MODULE 02: OFFICIAL PROFILE MANAGEMENT BACKEND APIs
+// PHASE 2: USER PROFILE BACKEND APIs (/api/profile & /api/v1/profile/me)
 // ============================================================================
 
-// 1. GET /api/v1/profile/me - Fetch authenticated official's full profile
-app.get('/api/v1/profile/me', authenticateOfficial, (req, res) => {
+const handleGetProfile = (req: express.Request, res: express.Response) => {
   const userId = (req as any).user.id;
-  const profile = profileStore.getProfile(userId);
+  const userEmail = (req as any).user.email;
+  let profile = profileStore.getProfile(userId);
 
   if (!profile) {
-    return res.status(404).json({
-      error: 'ProfileNotFound',
-      message: `No official profile registered for user ${userId}.`,
+    const created = profileStore.updateProfile(userId, {
+      fullName: (req as any).user.fullName || 'Official User',
+      department: 'Ministry of Statistics & Programme Implementation',
+      designation: 'Assistant Section Officer (ASO)',
+      workLocation: 'New Delhi',
+      yearsOfExperience: 4,
     });
+    profile = created.profile;
+  }
+
+  if (userEmail) {
+    profile.officialEmail = userEmail;
   }
 
   return res.json(profile);
-});
+};
 
-// 2. PUT /api/v1/profile/me - Update authenticated official's profile
-app.put('/api/v1/profile/me', authenticateOfficial, (req, res) => {
+const handleUpdateProfile = (req: express.Request, res: express.Response) => {
   const userId = (req as any).user.id;
   const updates = req.body;
 
-  // Validation rules
   if (!updates || typeof updates !== 'object') {
-    return res.status(400).json({ error: 'ValidationError', message: 'Request body must be a valid JSON object.' });
+    return res.status(400).json({ success: false, message: 'Request body must be a valid JSON object.' });
   }
 
-  if (updates.fullName !== undefined && (!updates.fullName || updates.fullName.trim().length < 2)) {
-    return res.status(400).json({ error: 'ValidationError', message: 'Full Name must be at least 2 characters.' });
+  // 1. Required: Full Name
+  const fullName = updates.fullName !== undefined ? updates.fullName : updates.name;
+  if (fullName !== undefined && (!fullName || !String(fullName).trim())) {
+    return res.status(400).json({ success: false, message: 'Full Name is required.' });
   }
 
-  if (updates.mobileNumber) {
-    const cleaned = updates.mobileNumber.replace(/[\s-]/g, '');
-    if (!/^\+?[0-9]{10,14}$/.test(cleaned)) {
-      return res.status(400).json({ error: 'ValidationError', message: 'Mobile number must be a valid 10-14 digit telephone number.' });
+  // 2. Required: Department / Organization
+  if (updates.department !== undefined && (!updates.department || !String(updates.department).trim())) {
+    return res.status(400).json({ success: false, message: 'Department / Organization is required.' });
+  }
+
+  // 3. Required: Designation / Job Role
+  if (updates.designation !== undefined && (!updates.designation || !String(updates.designation).trim())) {
+    return res.status(400).json({ success: false, message: 'Designation / Job Role is required.' });
+  }
+
+  // 4. Required: Education
+  const edu = updates.educationSummary !== undefined ? updates.educationSummary : updates.education;
+  if (edu !== undefined && (!edu || (typeof edu === 'string' && !edu.trim()) || (Array.isArray(edu) && edu.length === 0))) {
+    return res.status(400).json({ success: false, message: 'Education details are required.' });
+  }
+
+  // 5. Required & Valid: Years of Experience (non-negative number)
+  if (updates.yearsOfExperience !== undefined) {
+    const yrs = Number(updates.yearsOfExperience);
+    if (isNaN(yrs) || yrs < 0) {
+      return res.status(400).json({ success: false, message: 'Years of Experience must be a valid non-negative number.' });
     }
   }
 
-  if (updates.dateOfJoining) {
-    const joinDate = new Date(updates.dateOfJoining);
-    const today = new Date();
-    if (isNaN(joinDate.getTime())) {
-      return res.status(400).json({ error: 'ValidationError', message: 'Invalid Date of Joining format.' });
-    }
-    if (joinDate > today) {
-      return res.status(400).json({ error: 'ValidationError', message: 'Date of Joining cannot be in the future.' });
-    }
+  // 6. Required: Location / State
+  const workLocation = updates.workLocation !== undefined ? updates.workLocation : updates.location;
+  if (workLocation !== undefined && (!workLocation || !String(workLocation).trim())) {
+    return res.status(400).json({ success: false, message: 'Location / State is required.' });
   }
 
-  // System-controlled fields protection
-  const attemptedSystemModifications: string[] = [];
-  if (updates.officialEmail) attemptedSystemModifications.push('officialEmail');
-  if (updates.employeeId) attemptedSystemModifications.push('employeeId');
-  if (updates.organization) attemptedSystemModifications.push('organization');
+  // Security: Email is read-only and remains linked to account
+  delete updates.officialEmail;
+  delete updates.email;
+
+  if (updates.name && !updates.fullName) updates.fullName = updates.name;
+  if (updates.location && !updates.workLocation) updates.workLocation = updates.location;
+  if (typeof updates.education === 'string') updates.educationSummary = updates.education;
 
   const { profile, modifiedFields } = profileStore.updateProfile(userId, updates);
 
+  if ((req as any).user.email) {
+    profile.officialEmail = (req as any).user.email;
+  }
+
   return res.json({
     success: true,
-    message: 'Official profile updated successfully.',
+    message: 'Profile updated successfully.',
     modifiedFields,
-    systemFieldsProtected: attemptedSystemModifications.length > 0 ? attemptedSystemModifications : undefined,
     profile,
   });
-});
+};
+
+app.get('/api/profile', authenticateOfficial, handleGetProfile);
+app.put('/api/profile', authenticateOfficial, handleUpdateProfile);
+
+app.get('/api/v1/profile/me', authenticateOfficial, handleGetProfile);
+app.put('/api/v1/profile/me', authenticateOfficial, handleUpdateProfile);
 
 // 3. POST /api/v1/profile/education - Add an education record
 app.post('/api/v1/profile/education', authenticateOfficial, (req, res) => {
@@ -569,13 +806,20 @@ app.get('/api/v1/competencies/me', authenticateOfficial, (req, res) => {
 // 5. POST /api/v1/competency-assessments - Create or initialize an assessment session
 app.post('/api/v1/competency-assessments', authenticateOfficial, (req, res) => {
   const userId = (req as any).user.id;
-  const profile = profileStore.getProfile(userId);
+  let profile = profileStore.getProfile(userId);
 
   if (!profile) {
-    return res.status(404).json({ error: 'ProfileNotFound', message: 'Official profile not found. Complete profile first.' });
+    const created = profileStore.updateProfile(userId, {
+      fullName: (req as any).user.fullName || 'Official User',
+      department: 'Ministry of Statistics & Programme Implementation',
+      designation: 'Assistant Section Officer (ASO)',
+      workLocation: 'New Delhi',
+      yearsOfExperience: 4,
+    });
+    profile = created.profile;
   }
 
-  const { assessmentType } = req.body || {};
+  const { assessmentType, domain } = req.body || {};
 
   try {
     const session = competencyStore.createAssessmentSession({
@@ -584,6 +828,7 @@ app.post('/api/v1/competency-assessments', authenticateOfficial, (req, res) => {
       jobRole: profile.designation,
       department: profile.department,
       assessmentType: assessmentType || 'REASSESSMENT',
+      domain: domain,
     });
 
     return res.status(201).json({
@@ -593,6 +838,48 @@ app.post('/api/v1/competency-assessments', authenticateOfficial, (req, res) => {
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'SessionError', message: err.message });
+  }
+});
+
+// 5b. POST /api/v1/competencies/domain-assessment/start - Start a domain specific assessment
+app.post('/api/v1/competencies/domain-assessment/start', authenticateOfficial, (req, res) => {
+  const userId = (req as any).user.id;
+  const profile = profileStore.getProfile(userId) || {
+    fullName: (req as any).user.fullName || 'Official User',
+    designation: 'Assistant Section Officer (ASO)',
+    department: 'Ministry of Statistics & Programme Implementation',
+  };
+
+  const { domain } = req.body || {};
+  const validDomains = ['Statistical', 'Technical', 'Digital Governance', 'Behavioural / Managerial'];
+
+  if (!domain || !validDomains.includes(domain)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid domain specified. Must be one of: ${validDomains.join(', ')}`
+    });
+  }
+
+  try {
+    const session = competencyStore.createAssessmentSession({
+      userId,
+      officialName: profile.fullName || 'Official User',
+      jobRole: profile.designation || 'Assistant Section Officer (ASO)',
+      department: profile.department || 'MoSPI',
+      assessmentType: 'MODULE_EVALUATION',
+      domain: domain as any,
+    });
+
+    // Mask correct answer keys for client
+    const clientSession = competencyStore.getAssessmentSession(session.id, userId, true);
+
+    return res.status(201).json({
+      success: true,
+      message: `${domain} domain assessment started.`,
+      session: clientSession,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -2428,7 +2715,8 @@ app.post('/api/v1/performance/assessment-result', authenticateOfficial, (req, re
 });
 
 // Dev vs Production Vite mounting
-if (process.env.NODE_ENV === 'development') {
+const isProd = process.env.NODE_ENV === 'production';
+if (!isProd) {
   try {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -2438,6 +2726,14 @@ if (process.env.NODE_ENV === 'development') {
     app.use(vite.middlewares);
   } catch (e) {
     console.warn('Vite dev middleware not loaded:', e);
+  }
+} else {
+  const distPath = path.join(__dirname, 'dist');
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
   }
 }
 

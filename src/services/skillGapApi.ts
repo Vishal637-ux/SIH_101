@@ -5,12 +5,17 @@ import {
 } from '../types';
 
 function getAuthHeaders(userId?: string): HeadersInit {
-  const currentUserId = userId || localStorage.getItem('sih_active_user_id') || 'off-001';
-  return {
+  const token = localStorage.getItem('pradnyasetu_auth_token') || '';
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${currentUserId}`,
-    'x-user-id': currentUserId,
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (userId) {
+    headers['x-user-id'] = userId;
+  }
+  return headers;
 }
 
 export const skillGapApi = {

@@ -6,12 +6,12 @@ import {
   AssessmentDocket,
 } from '../types';
 
-function getAuthHeaders(userRole: string = 'Trainer'): HeadersInit {
-  const currentUserId = localStorage.getItem('sih_active_user_id') || 'off-001';
+function getAuthHeaders(userRole?: string): HeadersInit {
+  const token = localStorage.getItem('pradnyasetu_auth_token') || localStorage.getItem('sih_active_user_id') || 'off-001';
+  const role = userRole || localStorage.getItem('pradnyasetu_userRole') || 'Trainer';
   return {
-    Authorization: `Bearer ${currentUserId}`,
-    'x-user-id': currentUserId,
-    'x-user-role': userRole,
+    Authorization: `Bearer ${token}`,
+    'x-user-role': role,
   };
 }
 

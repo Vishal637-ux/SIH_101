@@ -9,18 +9,19 @@ import {
 
 // Helper to get active user ID from session or local storage
 function getAuthHeaders(userId?: string): HeadersInit {
-  const currentUserId = userId || localStorage.getItem('sih_active_user_id') || 'off-001';
+  const token = localStorage.getItem('pradnyasetu_auth_token') || userId || localStorage.getItem('sih_active_user_id') || 'off-001';
+  const role = localStorage.getItem('pradnyasetu_userRole') || 'Learner';
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${currentUserId}`,
-    'x-user-id': currentUserId,
+    Authorization: `Bearer ${token}`,
+    'x-user-role': role,
   };
 }
 
 export const profileApi = {
-  // GET /api/v1/profile/me
+  // GET /api/profile
   async getProfile(userId?: string): Promise<FullOfficialProfile> {
-    const res = await fetch('/api/v1/profile/me', {
+    const res = await fetch('/api/profile', {
       headers: getAuthHeaders(userId),
     });
     if (!res.ok) {
@@ -30,9 +31,9 @@ export const profileApi = {
     return res.json();
   },
 
-  // PUT /api/v1/profile/me
+  // PUT /api/profile
   async updateProfile(updates: Partial<FullOfficialProfile>, userId?: string): Promise<{ profile: FullOfficialProfile; message: string; modifiedFields: string[] }> {
-    const res = await fetch('/api/v1/profile/me', {
+    const res = await fetch('/api/profile', {
       method: 'PUT',
       headers: getAuthHeaders(userId),
       body: JSON.stringify(updates),

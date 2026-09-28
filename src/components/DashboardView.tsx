@@ -5,17 +5,19 @@ import {
   Award, 
   Target, 
   Sparkles, 
-  CheckSquare, 
   TrendingUp, 
-  Flame, 
   ArrowRight, 
   BookOpen, 
   CheckCircle2, 
   Clock, 
-  ChevronRight,
-  ShieldCheck,
-  Zap,
-  BarChart2
+  UploadCloud,
+  FileText,
+  HelpCircle,
+  Users,
+  Building2,
+  BarChart3,
+  BrainCircuit,
+  FileCheck
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -24,6 +26,7 @@ interface DashboardViewProps {
   gapResult: GapAnalysisResult | null;
   pathways: LearningPathwayItem[];
   theme: 'light' | 'dark';
+  userRole?: 'Learner' | 'Trainer' | 'Admin';
   onNavigateToProfile: () => void;
   onNavigateToSkills: () => void;
   onNavigateToSkillGaps: () => void;
@@ -37,11 +40,9 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   profile,
   competencies,
-  gapResult,
-  pathways,
   theme,
+  userRole = 'Learner',
   onNavigateToProfile,
-  onNavigateToSkills,
   onNavigateToSkillGaps,
   onNavigateToRecommendations,
   onNavigateToLearning,
@@ -51,558 +52,414 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const isLight = theme === 'light';
 
-  // Calculate metrics
-  const totalCompetencies = competencies.length;
-  const avgCurrentLevel = totalCompetencies > 0 
-    ? (competencies.reduce((acc, c) => acc + c.currentLevel, 0) / totalCompetencies).toFixed(1)
-    : '3.2';
-  const avgRequiredLevel = totalCompetencies > 0
-    ? (competencies.reduce((acc, c) => acc + c.requiredLevel, 0) / totalCompetencies).toFixed(1)
-    : '4.5';
-  
-  const highPriorityGaps = competencies.filter(c => c.urgency === 'High');
-  const overallProgressPct = Math.round((Number(avgCurrentLevel) / Number(avgRequiredLevel)) * 100);
-
-  return (
-    <div className="space-y-8 pb-12">
-      {/* Welcome Banner */}
-      <div className={`p-6 sm:p-8 rounded-2xl border transition-all ${
-        isLight 
-          ? 'bg-gradient-to-r from-[#0c2340] via-[#15345a] to-[#1e4676] text-white shadow-md border-slate-200' 
-          : 'bg-gradient-to-r from-[#0f172a] via-[#1e293b] to-[#334155] text-white border-slate-800 shadow-xl'
-      }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                Official Learner Dashboard
-              </span>
-              <span className="text-xs text-slate-300">• {profile.cadre}</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Welcome back, {profile.name}
-            </h1>
-            <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-              {profile.designation} — <span className="text-slate-200">{profile.department || profile.ministry}</span>. Continue building your capacity and targeted competencies for high-impact governance.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
-            <button
-              onClick={onNavigateToRecommendations}
-              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition-all shadow-md flex items-center gap-2 cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>View Recommended Courses</span>
-            </button>
-            <button
-              onClick={onNavigateToProfile}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm border border-white/20 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>My Profile</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Key Metric Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1 */}
-        <div 
-          onClick={onNavigateToProgress}
-          className={`p-5 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
-            isLight ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Overall Progress
-            </span>
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {overallProgressPct}%
-            </span>
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              +4% this week
-            </span>
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
-            <div 
-              className="bg-blue-600 h-full rounded-full transition-all duration-500" 
-              style={{ width: `${overallProgressPct}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Metric 2 */}
-        <div 
-          onClick={onNavigateToSkillGaps}
-          className={`p-5 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
-            isLight ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Competency Level
-            </span>
-            <div className="p-2 rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400">
-              <Target className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {avgCurrentLevel}
-            </span>
-            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-              / {avgRequiredLevel} Target
-            </span>
-          </div>
-          <p className="text-xs text-rose-600 dark:text-rose-400 font-semibold mt-2">
-            {highPriorityGaps.length} high priority gap{highPriorityGaps.length === 1 ? '' : 's'} identified
+  // =========================================================================
+  // 1. TRAINER DASHBOARD (Rule 14)
+  // =========================================================================
+  if (userRole === 'Trainer') {
+    return (
+      <div className="space-y-8 pb-8">
+        {/* Title */}
+        <div className="border-b pb-4 border-slate-200 dark:border-slate-800">
+          <h1 className={`text-2xl font-extrabold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
+            Trainer Dashboard
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            AI Content Processing, Course Authoring & Learner Performance Tracking
           </p>
         </div>
 
-        {/* Metric 3 */}
-        <div 
-          onClick={onNavigateToLearning}
-          className={`p-5 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
-            isLight ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Learning Streak
+        {/* Trainer Workflow matching Rule 14 */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-blue-50/50 border-blue-200' : 'bg-blue-950/20 border-blue-800/40'}`}>
+          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3 text-center">
+            Trainer Workflow
+          </h3>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-bold">
+            <span className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white shadow-xs flex items-center gap-1.5">
+              <UploadCloud className="w-4 h-4" /> Upload PDF / Book
             </span>
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
-              <Flame className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {profile.streakDays || 9} Days
+            <span className="text-slate-400">→</span>
+            <span className="px-3.5 py-1.5 rounded-xl bg-[#0c2340] text-amber-300 shadow-xs flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4" /> AI Processing
             </span>
-            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-              Active Streak 🔥
+            <span className="text-slate-400">→</span>
+            <span className="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white shadow-xs flex items-center gap-1.5">
+              <BookOpen className="w-4 h-4" /> Generate Content
             </span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-            {profile.completedCourses || 5} courses completed
-          </p>
-        </div>
-
-        {/* Metric 4 */}
-        <div 
-          onClick={onNavigateToProgress}
-          className={`p-5 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
-            isLight ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Karma Points
+            <span className="text-slate-400">→</span>
+            <span className="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white shadow-xs flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" /> Review & Publish
             </span>
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-              <Award className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
-              {profile.karmaPoints || 420}
-            </span>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Points
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-            iGOT Karmayogi Recognition
-          </p>
-        </div>
-      </div>
-
-      {/* Learning Journey Progress Roadmap Card */}
-      <div className={`p-6 rounded-2xl border transition-colors ${
-        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-      }`}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Your Capacity Building Journey
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Targeted progression based on role expectations and competency mapping
-            </p>
-          </div>
-          <button
-            onClick={onNavigateToSkillGaps}
-            className="text-xs font-semibold text-[#0c2340] dark:text-blue-400 hover:underline flex items-center gap-1"
-          >
-            <span>Analyze Gaps</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          {[
-            { step: 1, title: 'Official Profile', status: 'Completed', icon: ShieldCheck, nav: () => onSelectStep?.(2) },
-            { step: 2, title: 'Competencies', status: 'Completed', icon: Award, nav: () => onSelectStep?.(3) },
-            { step: 3, title: 'Skill-Gap Analysis', status: 'In Progress', icon: Target, nav: () => onSelectStep?.(4) },
-            { step: 4, title: 'AI Recommendations', status: 'Available', icon: Sparkles, nav: () => onSelectStep?.(5) },
-            { step: 5, title: 'Interactive Learning', status: 'Available', icon: GraduationCap, nav: () => onSelectStep?.(6) },
-            { step: 6, title: 'Assessment & Uplift', status: 'Next', icon: CheckSquare, nav: () => onSelectStep?.(7) },
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            const isDone = item.status === 'Completed';
-            const isInProgress = item.status === 'In Progress';
-            return (
-              <div 
-                key={idx}
-                onClick={item.nav}
-                className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
-                  isInProgress
-                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 ring-1 ring-blue-500/50'
-                    : isDone
-                    ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900 dark:bg-emerald-950/20'
-                    : 'border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center mb-2 text-xs font-bold ${
-                  isInProgress
-                    ? 'bg-blue-600 text-white'
-                    : isDone
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                }`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                  {item.title}
-                </div>
-                <div className={`text-[10px] font-semibold mt-1 ${
-                  isInProgress
-                    ? 'text-blue-700 dark:text-blue-400'
-                    : isDone
-                    ? 'text-emerald-700 dark:text-emerald-400'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}>
-                  {item.status}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main Content Grid: Continue Learning + Recommendations */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column (2 cols): Continue Learning & Current Competency Gaps */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Continue Learning Section */}
-          <div className={`p-6 rounded-2xl border transition-colors ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-          }`}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Continue Learning
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Pick up where you left off in your assigned capacity building modules
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onNavigateToLearning}
-                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-              >
-                <span>View All</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className={`p-4 rounded-xl border transition-all ${
-                isLight ? 'bg-slate-50/70 border-slate-200 hover:border-slate-300' : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
-              }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                      General Financial Rules 2017 & GeM
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Public Procurement & GeM 4.0 Framework
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Module 2: Direct Purchases, Reverse Bidding & PAC Certifications
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-right hidden sm:block">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">65% Done</span>
-                      <p className="text-[10px] text-slate-400">Est. 25 mins left</p>
-                    </div>
-                    <button
-                      onClick={onNavigateToLearning}
-                      className="px-3.5 py-2 rounded-lg bg-[#0c2340] hover:bg-slate-800 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>Continue</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div className="bg-blue-600 h-full rounded-full" style={{ width: '65%' }} />
-                </div>
-              </div>
-
-              <div className={`p-4 rounded-xl border transition-all ${
-                isLight ? 'bg-slate-50/70 border-slate-200 hover:border-slate-300' : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
-              }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
-                      Policy Analytics
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Statistical Verification & Evidence-Based Public Policy
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Module 1: Field Sampling Rigor & Scheme Survey Validation
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-right hidden sm:block">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">30% Done</span>
-                      <p className="text-[10px] text-slate-400">Est. 40 mins left</p>
-                    </div>
-                    <button
-                      onClick={onNavigateToLearning}
-                      className="px-3.5 py-2 rounded-lg bg-[#0c2340] hover:bg-slate-800 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>Continue</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div className="bg-purple-600 h-full rounded-full" style={{ width: '30%' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Top Priority Skill Gaps */}
-          <div className={`p-6 rounded-2xl border transition-colors ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-          }`}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400">
-                  <Target className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Targeted Skill Gaps
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Competencies requiring targeted capacity building for target role
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onNavigateToSkillGaps}
-                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-              >
-                <span>Full Gap Analysis</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {competencies.slice(0, 4).map((c) => {
-                const isHigh = c.urgency === 'High';
-                const isMedium = c.urgency === 'Medium';
-                return (
-                  <div 
-                    key={c.id} 
-                    className={`p-4 rounded-xl border flex flex-col justify-between ${
-                      isLight ? 'bg-slate-50/50 border-slate-200' : 'bg-slate-800/40 border-slate-700'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          isHigh 
-                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300' 
-                            : isMedium
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                        }`}>
-                          {c.urgency} Urgency
-                        </span>
-                        <span className="text-xs font-bold text-slate-500">
-                          Gap: {c.gapScore} pts
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
-                        {c.name}
-                      </h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                        {c.domain} • Required: {c.requiredLevel} / Current: {c.currentLevel}
-                      </p>
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500 font-medium">
-                        Level {c.currentLevel} → {c.requiredLevel}
-                      </span>
-                      <button
-                        onClick={onNavigateToRecommendations}
-                        className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>Find Course</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
 
-        {/* Right Column (1 col): AI Recommendations & Assessments */}
-        <div className="space-y-8">
-          {/* Recommended for You */}
-          <div className={`p-6 rounded-2xl border transition-colors ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-          }`}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    Recommended for You
-                  </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    AI matched for target role
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onNavigateToRecommendations}
-                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
-              >
-                View All
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {pathways.slice(0, 3).map((path) => (
-                <div 
-                  key={path.id}
-                  onClick={onNavigateToRecommendations}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    isLight 
-                      ? 'bg-amber-50/30 border-amber-200/60 hover:border-amber-300 hover:bg-amber-50' 
-                      : 'bg-amber-950/20 border-amber-900/40 hover:border-amber-700/60 hover:bg-amber-900/30'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
-                      {path.source}
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-500">
-                      {path.estimatedHours} hrs • {path.karmaPoints} pts
-                    </span>
+        {/* 3 Main Sections matching Rule 14 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Section 1: Recent Uploads */}
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+              <UploadCloud className="w-4 h-4 text-blue-600" />
+              Recent Uploads
+            </h3>
+            <div className="space-y-2.5">
+              {[
+                { name: 'GFR_2017_Procurement_Manual.pdf', date: 'Yesterday', status: 'Published' },
+                { name: 'DPDP_Act_2023_Compliance_Guide.pdf', date: '3 days ago', status: 'Processed' },
+                { name: 'National_Data_Governance_Draft.docx', date: '5 days ago', status: 'Draft' },
+              ].map((item, i) => (
+                <div key={i} className={`p-3 rounded-xl border text-xs flex items-center justify-between ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+                  <div>
+                    <p className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[180px]">{item.name}</p>
+                    <p className="text-[10px] text-slate-500">{item.date}</p>
                   </div>
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-2">
-                    {path.title}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
-                    Addresses: {path.competencyAddressed}
-                  </p>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                    {item.status}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Upcoming / Recent Assessments */}
-          <div className={`p-6 rounded-2xl border transition-colors ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-          }`}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                  <CheckSquare className="w-5 h-5" />
+          {/* Section 2: Generated MCQs */}
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-purple-600" />
+              Generated MCQs
+            </h3>
+            <div className="space-y-2.5">
+              {[
+                { title: 'Public Procurement & GeM Rules', count: '48 Questions' },
+                { title: 'Data Privacy & Security Protocols', count: '32 Questions' },
+                { title: 'Statistical Sampling Rigor', count: '24 Questions' },
+              ].map((item, i) => (
+                <div key={i} className={`p-3 rounded-xl border text-xs flex items-center justify-between ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+                  <p className="font-bold text-slate-800 dark:text-slate-200">{item.title}</p>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                    {item.count}
+                  </span>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    Assessments
-                  </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Verify skill uplift & credentials
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onNavigateToAssessments}
-                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
-              >
-                Assessments
-              </button>
+              ))}
             </div>
+          </div>
 
+          {/* Section 3: Learner Performance */}
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-600" />
+              Learner Performance
+            </h3>
             <div className="space-y-3">
-              <div className={`p-3.5 rounded-xl border ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800/60 border-slate-700'
-              }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                    Public Procurement GFR 2017
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                    Pending Take
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
-                  4 AI adaptive questions • 120 Karma Points
-                </p>
-                <button
-                  onClick={onNavigateToAssessments}
-                  className="w-full py-1.5 rounded-lg bg-[#0c2340] text-white text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  <span>Start Assessment</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
+              <div className="flex justify-between text-xs font-semibold">
+                <span>Average Quiz Score:</span>
+                <span className="font-bold text-emerald-600">86.4%</span>
               </div>
-
-              <div className={`p-3.5 rounded-xl border ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800/60 border-slate-700'
-              }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                    e-Governance Compliance
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                    Passed (90%)
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Completed 3 days ago • Competency level upgraded to 4.0
-                </p>
+              <div className="flex justify-between text-xs font-semibold">
+                <span>Active Participants:</span>
+                <span className="font-bold text-blue-600">1,240 Officials</span>
+              </div>
+              <div className="flex justify-between text-xs font-semibold">
+                <span>Course Completion Rate:</span>
+                <span className="font-bold text-purple-600">92.1%</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 2. ADMIN DASHBOARD (Rule 15)
+  // =========================================================================
+  if (userRole === 'Admin') {
+    return (
+      <div className="space-y-8 pb-8">
+        {/* Title */}
+        <div className="border-b pb-4 border-slate-200 dark:border-slate-800">
+          <h1 className={`text-2xl font-extrabold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
+            Admin Dashboard (Workforce Analytics)
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Civil Services Capacity Building Workforce Intelligence & Department Metrics
+          </p>
+        </div>
+
+        {/* Top Cards matching Rule 15 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Officials</span>
+            <p className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-2">14,250</p>
+            <p className="text-[11px] font-semibold text-emerald-600 mt-1">Across Central Cadres</p>
+          </div>
+
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departments</span>
+            <p className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-2">42</p>
+            <p className="text-[11px] font-semibold text-blue-600 mt-1">Ministries & Line Agencies</p>
+          </div>
+
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ongoing Trainings</span>
+            <p className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-2">184</p>
+            <p className="text-[11px] font-semibold text-purple-600 mt-1">Active Batches</p>
+          </div>
+
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Completion Rate</span>
+            <p className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-2">89.2%</p>
+            <p className="text-[11px] font-semibold text-emerald-600 mt-1">+4.5% vs Last Quarter</p>
+          </div>
+        </div>
+
+        {/* 4 Charts/Sections matching Rule 15 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Department-wise Skill Gap */}
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">
+              Department-wise Skill Gap
+            </h3>
+            <div className="space-y-3 text-xs">
+              {[
+                { dept: 'Ministry of Finance (Expenditure)', gap: '1.8 Avg Gap', pct: 72 },
+                { dept: 'DoPT (Personnel & Training)', gap: '1.2 Avg Gap', pct: 48 },
+                { dept: 'Ministry of Statistics & PI', gap: '2.1 Avg Gap', pct: 84 },
+                { dept: 'MeitY (Digital Governance)', gap: '1.4 Avg Gap', pct: 56 },
+              ].map((d, i) => (
+                <div key={i} className="space-y-1">
+                  <div className="flex justify-between font-semibold">
+                    <span>{d.dept}</span>
+                    <span className="text-rose-600 font-bold">{d.gap}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                    <div className="h-full bg-rose-500 rounded-full" style={{ width: `${d.pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Skill Gaps */}
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">
+              Top Skill Gaps
+            </h3>
+            <div className="space-y-3 text-xs">
+              {[
+                { skill: 'Data Analytics & Python', impact: 'Critical (3,400 Officials Required)' },
+                { skill: 'Public Procurement & GeM Rules', impact: 'High (2,100 Officials Required)' },
+                { skill: 'DPDP Data Privacy Compliance', impact: 'High (1,950 Officials Required)' },
+                { skill: 'Evidence-Based Policy Formulation', impact: 'Medium (1,200 Officials Required)' },
+              ].map((s, i) => (
+                <div key={i} className={`p-3 rounded-xl border flex items-center justify-between ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{s.skill}</span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-400">
+                    {s.impact}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Training Completion Trend */}
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">
+              Training Completion Trend
+            </h3>
+            <div className="space-y-2 text-xs">
+              {['Q1 2026: 2,400 Completed', 'Q2 2026: 3,100 Completed', 'Q3 2026: 4,200 Completed', 'Q4 2026 (Target): 5,000 Completed'].map((t, i) => (
+                <div key={i} className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Competency Distribution */}
+          <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">
+              Competency Distribution
+            </h3>
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between font-semibold"><span>Level 5 (Expert / Master):</span> <span className="font-bold text-emerald-600">18%</span></div>
+              <div className="flex justify-between font-semibold"><span>Level 4 (Advanced):</span> <span className="font-bold text-blue-600">32%</span></div>
+              <div className="flex justify-between font-semibold"><span>Level 3 (Intermediate):</span> <span className="font-bold text-amber-600">38%</span></div>
+              <div className="flex justify-between font-semibold"><span>Level 1-2 (Foundation):</span> <span className="font-bold text-rose-600">12%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 3. GOVERNMENT OFFICIAL (LEARNER) DASHBOARD (Rule 13)
+  // =========================================================================
+  return (
+    <div className="space-y-8 pb-8">
+      {/* Title */}
+      <div className="border-b pb-4 border-slate-200 dark:border-slate-800">
+        <h1 className={`text-2xl font-extrabold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
+          Government Official Dashboard
+        </h1>
+        <p className="text-xs text-slate-500 mt-1">
+          Welcome back, {profile.name} ({profile.designation})
+        </p>
+      </div>
+
+      {/* Top Summary Cards matching Rule 13 (4 exact elements) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1. Learning Progress */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Learning Progress</span>
+            <TrendingUp className="w-4 h-4 text-blue-600" />
+          </div>
+          <p className="text-3xl font-black text-slate-900 dark:text-slate-100">78%</p>
+          <p className="text-[11px] font-semibold text-slate-500 mt-1">Target Competency Rate</p>
+        </div>
+
+        {/* 2. Ongoing Courses */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ongoing Courses</span>
+            <BookOpen className="w-4 h-4 text-amber-600" />
+          </div>
+          <p className="text-3xl font-black text-slate-900 dark:text-slate-100">2 Courses</p>
+          <p className="text-[11px] font-semibold text-amber-600 mt-1">In Progress</p>
+        </div>
+
+        {/* 3. Completed Courses */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Completed Courses</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          </div>
+          <p className="text-3xl font-black text-slate-900 dark:text-slate-100">5 Courses</p>
+          <p className="text-[11px] font-semibold text-emerald-600 mt-1">Verified Badges</p>
+        </div>
+
+        {/* 4. Achievements */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Achievements</span>
+            <Award className="w-4 h-4 text-purple-600" />
+          </div>
+          <p className="text-3xl font-black text-slate-900 dark:text-slate-100">420 Points</p>
+          <p className="text-[11px] font-semibold text-purple-600 mt-1">Level 3 Master</p>
+        </div>
+      </div>
+
+      {/* Main Sections matching Rule 13 (4 exact sections) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Section 1: Recommended for You */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-blue-600" />
+              Recommended for You
+            </h3>
+            <button 
+              onClick={onNavigateToRecommendations}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+            >
+              <span>View All</span> <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              { title: 'Advanced Statistical Analysis', gap: 'Statistics Gap (-2.0)', tag: 'Based on your skill gap' },
+              { title: 'Python for Data Analysis', gap: 'Python Gap (-2.0)', tag: 'Based on your skill gap' },
+            ].map((item, i) => (
+              <div key={i} className={`p-3.5 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                  {item.tag}
+                </span>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-1">{item.title}</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">{item.gap}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 2: Skill Gap Overview */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Target className="w-4 h-4 text-rose-600" />
+              Skill Gap Overview
+            </h3>
+            <button 
+              onClick={onNavigateToSkillGaps}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Report</span> <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            {[
+              { name: 'Data Analysis', gap: '-2.0', current: '2.5 / 4.5' },
+              { name: 'Statistics', gap: '-2.0', current: '2.0 / 4.0' },
+              { name: 'Python', gap: '-2.0', current: '1.5 / 3.5' },
+              { name: 'Communication', gap: '-1.0', current: '3.5 / 4.5' },
+            ].map((s, i) => (
+              <div key={i} className="flex items-center justify-between font-semibold">
+                <span>{s.name} ({s.current})</span>
+                <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-400 font-extrabold text-[11px]">
+                  Gap: {s.gap}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 3: Continue Learning */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-amber-600" />
+              Continue Learning
+            </h3>
+            <button 
+              onClick={onNavigateToLearning}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Open Player</span> <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className={`p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+              General Financial Rules 2017 & GeM Procurement
+            </h4>
+            <p className="text-[11px] text-slate-500 mt-1">Module 2 of 5 • 65% Completed</p>
+            <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden mt-2">
+              <div className="h-full bg-amber-500 rounded-full" style={{ width: '65%' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: Upcoming Assessment */}
+        <div className={`p-5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <BrainCircuit className="w-4 h-4 text-purple-600" />
+              Upcoming Assessment
+            </h3>
+            <button 
+              onClick={onNavigateToAssessments}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Start</span> <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className={`p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+              Role Based Evaluation: Public Procurement & Compliance
+            </h4>
+            <p className="text-[11px] text-slate-500 mt-1">15 Questions • Estimated time: 20 mins</p>
           </div>
         </div>
       </div>

@@ -798,6 +798,10 @@ class LearningDataStore {
     return list;
   }
 
+  public getUserProgressList(userId: string): LearningProgressRecord[] {
+    return this.getAllUserProgress(userId);
+  }
+
   // Internal helper to log learning history
   private logActivity(
     userId: string,

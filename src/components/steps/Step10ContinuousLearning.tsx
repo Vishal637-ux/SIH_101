@@ -1,76 +1,81 @@
-import React, { useState } from 'react';
-import { OfficialProfile, CompetencyItem } from '../../types';
-import { RotateCw, ArrowLeft } from 'lucide-react';
+import React from 'react';
+import { OfficialProfile } from '../../types';
+import { RefreshCw, CheckCircle2, ArrowRight, Sparkles, Target } from 'lucide-react';
 
-interface Step10ContinuousLearningProps {
+interface Step10Props {
   profile: OfficialProfile;
-  competencies: CompetencyItem[];
   onTriggerNewCycle: () => void;
-  onBack: () => void;
+  onBack?: () => void;
   theme: 'light' | 'dark';
 }
 
-export const Step10ContinuousLearning: React.FC<Step10ContinuousLearningProps> = ({
-  profile,
-  competencies,
+export const Step10ContinuousLearning: React.FC<Step10Props> = ({
   onTriggerNewCycle,
-  onBack,
   theme,
 }) => {
-  const [isLooping, setIsLooping] = useState(false);
-
-  const handleStartNextCycle = () => {
-    setIsLooping(true);
-    setTimeout(() => {
-      onTriggerNewCycle();
-      setIsLooping(false);
-    }, 600);
-  };
-
   const isLight = theme === 'light';
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Title */}
-      <div>
-        <h2 className={`text-2xl font-bold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
-          Continuous Learning: Re-assess → Identify New Gaps → Recommend → Learn 🔄
+      <div className="border-b pb-4 border-slate-200 dark:border-slate-800 text-center">
+        <h2 className={`text-2xl font-extrabold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
+          Competency Profile Update
         </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Continuous Learning Cycle Engine & Level Advancement
+        </p>
       </div>
 
-      {/* Cycle Description Card */}
-      <div className={`p-6 rounded-xl border text-center space-y-4 ${
+      {/* Cycle Diagram matching Rule 12 */}
+      <div className={`p-8 rounded-2xl border shadow-sm space-y-6 text-center ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
-        <p className="text-xs text-slate-600 dark:text-slate-300 max-w-lg mx-auto leading-relaxed">
-          As competencies are mastered, benchmarks elevate automatically. Triggering the next cycle adjusts standards for higher-order governance responsibilities and identifies new learning needs.
-        </p>
+        <div className="flex justify-center">
+          <div className="p-3 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-300">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
+        </div>
 
-        <div className="pt-2">
+        <div>
+          <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
+            Profile Updated With New Competencies!
+          </h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+            Your recent assessment completion has upgraded your official competency rating. The capacity engine has calculated your new benchmark gap.
+          </p>
+        </div>
+
+        {/* Visual 3-Stage Cycle Flow */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <div className={`p-4 rounded-xl border text-center ${isLight ? 'bg-blue-50/60 border-blue-200' : 'bg-blue-950/30 border-blue-800'}`}>
+            <CheckCircle2 className="w-5 h-5 text-blue-600 mx-auto mb-1.5" />
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">1. Profile Updated</h4>
+            <p className="text-[11px] text-slate-500 mt-0.5">New Competencies Registered</p>
+          </div>
+
+          <div className={`p-4 rounded-xl border text-center ${isLight ? 'bg-purple-50/60 border-purple-200' : 'bg-purple-950/30 border-purple-800'}`}>
+            <Target className="w-5 h-5 text-purple-600 mx-auto mb-1.5" />
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">2. New Skill Gap Analysis</h4>
+            <p className="text-[11px] text-slate-500 mt-0.5">Next-Level Gap Recalculated</p>
+          </div>
+
+          <div className={`p-4 rounded-xl border text-center ${isLight ? 'bg-amber-50/60 border-amber-200' : 'bg-amber-950/30 border-amber-800'}`}>
+            <Sparkles className="w-5 h-5 text-amber-600 mx-auto mb-1.5" />
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">3. New Recommendations</h4>
+            <p className="text-[11px] text-slate-500 mt-0.5">Fresh AI Learning Pathway</p>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-center">
           <button
-            onClick={handleStartNextCycle}
-            disabled={isLooping}
-            className="px-6 py-2.5 rounded-lg bg-[#0c2340] hover:bg-[#133560] text-white text-xs font-semibold inline-flex items-center gap-2 transition-all shadow"
+            onClick={onTriggerNewCycle}
+            className="py-3 px-8 rounded-xl bg-[#0c2340] hover:bg-[#15345a] text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
           >
-            <RotateCw className={`w-4 h-4 ${isLooping ? 'animate-spin' : ''}`} />
-            <span>{isLooping ? 'Elevating Competency Standards...' : 'Start Next Learning Cycle (Repeat 🔄)'}</span>
+            <RefreshCw className="w-4 h-4" />
+            <span>Repeat Continuous Learning Cycle</span>
           </button>
         </div>
-      </div>
-
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-start pt-2">
-        <button
-          onClick={onBack}
-          className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 border ${
-            isLight
-              ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-              : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
-          }`}
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back</span>
-        </button>
       </div>
     </div>
   );

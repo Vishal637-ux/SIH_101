@@ -586,6 +586,26 @@ export const profileStore = {
       profile.profilePhoto = updates.profilePhoto;
       modifiedFields.push('profilePhoto');
     }
+    if (updates.githubUrl !== undefined) {
+      profile.githubUrl = updates.githubUrl.trim();
+      modifiedFields.push('githubUrl');
+    }
+    if (updates.portfolioUrl !== undefined) {
+      profile.portfolioUrl = updates.portfolioUrl.trim();
+      modifiedFields.push('portfolioUrl');
+    }
+    if (updates.resumeUrl !== undefined) {
+      profile.resumeUrl = updates.resumeUrl;
+      modifiedFields.push('resumeUrl');
+    }
+    if (updates.resumeName !== undefined) {
+      profile.resumeName = updates.resumeName.trim();
+      modifiedFields.push('resumeName');
+    }
+    if (updates.educationSummary !== undefined) {
+      (profile as any).educationSummary = updates.educationSummary.trim();
+      modifiedFields.push('educationSummary');
+    }
 
     // Professional profile fields
     if (updates.responsibilities !== undefined) {

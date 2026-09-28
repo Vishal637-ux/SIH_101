@@ -1,185 +1,122 @@
 import React, { useState } from 'react';
-import { OfficialProfile, DemoAssessmentQuestion, AssessmentEvaluation } from '../../types';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { OfficialProfile } from '../../types';
+import { FileUp, Sparkles, FileText, CheckCircle, ArrowRight, HelpCircle } from 'lucide-react';
 
-interface Step7AssessmentProps {
+interface Step7Props {
   profile: OfficialProfile;
-  questions: DemoAssessmentQuestion[];
-  evaluation: AssessmentEvaluation | null;
-  onSubmitEvaluation: (evalResult: AssessmentEvaluation) => void;
   onNext: () => void;
-  onBack: () => void;
+  onBack?: () => void;
   theme: 'light' | 'dark';
 }
 
-export const Step7Assessment: React.FC<Step7AssessmentProps> = ({
-  profile,
-  questions,
-  evaluation,
-  onSubmitEvaluation,
+export const Step7Assessment: React.FC<Step7Props> = ({
   onNext,
-  onBack,
   theme,
 }) => {
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
-  const [submitted, setSubmitted] = useState(evaluation !== null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSelectOption = (questionId: string, optionIdx: number) => {
-    if (submitted) return;
-    setSelectedAnswers(prev => ({
-      ...prev,
-      [questionId]: optionIdx,
-    }));
-  };
-
-  const answeredCount = Object.keys(selectedAnswers).length;
-  const isAllAnswered = answeredCount === questions.length;
-
-  const handleSubmit = async () => {
-    if (!isAllAnswered) return;
-    setIsSubmitting(true);
-
-    try {
-      const res = await fetch('/api/evaluate-assessment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          answers: selectedAnswers,
-          questions,
-          officialProfile: profile,
-        }),
-      });
-
-      if (res.ok) {
-        const data: AssessmentEvaluation = await res.json();
-        onSubmitEvaluation(data);
-        setSubmitted(true);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const isLight = theme === 'light';
+  const [selectedSource, setSelectedSource] = useState<'PDF' | 'Book' | 'Document'>('PDF');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [stepFinished, setStepFinished] = useState(true);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Title */}
-      <div>
-        <h2 className={`text-2xl font-bold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
-          AI Assessment: MCQs, Quizzes & Tests
+      <div className="border-b pb-4 border-slate-200 dark:border-slate-800">
+        <h2 className={`text-2xl font-extrabold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
+          AI Content Adaptation
         </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Automated simplification, key point extraction, and adaptive MCQ generation for official manuals
+        </p>
       </div>
 
-      {/* Questions list */}
-      <div className="space-y-4">
-        {questions.map((q, idx) => {
-          const selected = selectedAnswers[q.id];
-          const isCorrect = selected === q.correctIndex;
-
-          return (
-            <div
-              key={q.id}
-              className={`p-5 rounded-xl border transition-all ${
-                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                  {idx + 1}
-                </span>
-                <div className="w-full">
-                  <h4 className={`text-sm font-bold leading-snug ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                    {q.question}
-                  </h4>
-
-                  <div className="mt-3 space-y-2">
-                    {q.options.map((opt, optIdx) => {
-                      const isOptionSelected = selected === optIdx;
-                      let optionStyle = isLight
-                        ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                        : 'border-slate-800 bg-slate-800/40 text-slate-300 hover:bg-slate-800';
-
-                      if (submitted) {
-                        if (optIdx === q.correctIndex) {
-                          optionStyle = 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200';
-                        } else if (isOptionSelected && !isCorrect) {
-                          optionStyle = 'border-rose-500 bg-rose-50 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200';
-                        }
-                      } else if (isOptionSelected) {
-                        optionStyle = isLight
-                          ? 'border-[#0c2340] bg-blue-50/70 text-[#0c2340] font-semibold'
-                          : 'border-blue-500 bg-blue-950/40 text-blue-200 font-semibold';
-                      }
-
-                      return (
-                        <div
-                          key={optIdx}
-                          onClick={() => handleSelectOption(q.id, optIdx)}
-                          className={`p-3 rounded-lg border text-xs cursor-pointer flex items-center justify-between transition-colors ${optionStyle}`}
-                        >
-                          <span>{opt}</span>
-                          <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[9px] ${
-                            isOptionSelected ? 'border-[#0c2340] bg-[#0c2340] text-white' : 'border-slate-300'
-                          }`}>
-                            {isOptionSelected ? '✓' : ''}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Explanation after submission */}
-                  {submitted && (
-                    <div className="mt-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-xs text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800">
-                      <strong>Statutory Explanation:</strong> {q.explanation}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* Visual Flow diagram matching Rule 9 */}
+      <div className={`p-4 rounded-2xl border ${isLight ? 'bg-[#0c2340]/5 border-[#0c2340]/20' : 'bg-blue-950/20 border-blue-800/40'}`}>
+        <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3 text-center">
+          Adaptation Pipeline Flow
+        </h4>
+        <div className="flex flex-wrap items-center justify-center gap-2 text-center text-[11px] font-bold">
+          <span className="px-3 py-1 rounded-lg bg-blue-600 text-white shadow-xs">Upload / Select Content</span>
+          <span className="text-slate-400">↓</span>
+          <span className="px-3 py-1 rounded-lg bg-[#0c2340] text-amber-300 shadow-xs">AI Understands Content</span>
+          <span className="text-slate-400">↓</span>
+          <span className="px-3 py-1 rounded-lg bg-emerald-600 text-white shadow-xs">Summary & Key Points</span>
+          <span className="text-slate-400">↓</span>
+          <span className="px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-xs">Simplified Explanation</span>
+          <span className="text-slate-400">↓</span>
+          <span className="px-3 py-1 rounded-lg bg-purple-600 text-white shadow-xs">AI Generated MCQs / Quiz</span>
+          <span className="text-slate-400">↓</span>
+          <span className="px-3 py-1 rounded-lg bg-amber-600 text-white shadow-xs">Personalized Content (Based on user level)</span>
+        </div>
       </div>
 
-      {/* Action Footer */}
-      <div className="flex items-center justify-between pt-2">
-        <button
-          onClick={onBack}
-          className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 border ${
-            isLight
-              ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-              : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
-          }`}
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back</span>
-        </button>
-
-        {!submitted ? (
+      {/* Source Selector */}
+      <div className="grid grid-cols-3 gap-3">
+        {(['PDF', 'Book', 'Document'] as const).map((src) => (
           <button
-            onClick={handleSubmit}
-            disabled={!isAllAnswered || isSubmitting}
-            className={`px-5 py-2 rounded-lg text-xs font-semibold transition-colors shadow ${
-              isAllAnswered
-                ? 'bg-[#0c2340] hover:bg-[#133560] text-white'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800'
+            key={src}
+            onClick={() => setSelectedSource(src)}
+            className={`p-4 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              selectedSource === src
+                ? 'bg-[#0c2340] text-white border-[#0c2340] shadow-md'
+                : isLight
+                ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
             }`}
           >
-            <span>{isSubmitting ? 'Evaluating...' : 'Submit Answers'}</span>
+            <FileText className="w-4 h-4" />
+            <span>Source: {src}</span>
           </button>
-        ) : (
-          <button
-            onClick={onNext}
-            className="px-5 py-2 rounded-lg bg-[#0c2340] hover:bg-[#133560] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow"
-          >
-            <span>Proceed to Competency Update</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        )}
+        ))}
+      </div>
+
+      {/* Adapted Content Result View */}
+      <div className={`p-6 rounded-2xl border space-y-4 ${
+        isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-slate-900 border-slate-800'
+      }`}>
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-500" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              Adapted Output: General Financial Rules 2017 ({selectedSource})
+            </h3>
+          </div>
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-300 dark:text-emerald-300">
+            Adapted to Pay Level 11 Intermediate Level
+          </span>
+        </div>
+
+        {/* Summary & Key Points */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-extrabold uppercase text-slate-600 dark:text-slate-400">
+            Summary & Key Points
+          </h4>
+          <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 pl-4 list-disc">
+            <li>Mandatory adherence to open competitive bidding principles under GFR Rule 144.</li>
+            <li>GeM procurement mandatory thresholds: Direct purchase up to ₹25,000, L1 purchasing up to ₹5,00,000.</li>
+            <li>Audit trail compliance and performance guarantee limits capped at 3-5% of contract value.</li>
+          </ul>
+        </div>
+
+        {/* Simplified Explanation */}
+        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <h4 className="text-xs font-extrabold uppercase text-slate-600 dark:text-slate-400">
+            Simplified Explanation
+          </h4>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Public procurement requires every official to act as a custodian of public funds. Whenever purchasing goods or contracting services, transparency must be maintained by ensuring specifications are objective, vendor neutral, and properly recorded on GeM.
+          </p>
+        </div>
+      </div>
+
+      <div className="pt-2 flex justify-end">
+        <button
+          onClick={onNext}
+          className="py-2.5 px-6 rounded-xl bg-[#0c2340] hover:bg-[#15345a] text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+        >
+          <span>Take AI-Based Assessment</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

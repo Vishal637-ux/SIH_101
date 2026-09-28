@@ -132,6 +132,13 @@ export interface FullOfficialProfile {
   areasOfExpertise: string[];
   professionalInterests: string[];
 
+  // Links, Portfolio & Documents
+  githubUrl?: string;
+  portfolioUrl?: string;
+  resumeUrl?: string;
+  resumeName?: string;
+  educationSummary?: string;
+
   // Relational Collections
   education: EducationRecord[];
   experience: ExperienceRecord[];

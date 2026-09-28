@@ -1,314 +1,648 @@
 import React, { useState } from 'react';
 import { OfficialProfile } from '../../types';
 import { SAMPLE_PROFILES } from '../../mockData';
-import { ArrowRight, Check } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { authApi } from '../../services/authApi';
 
 interface Step1LoginProps {
   currentProfile: OfficialProfile;
-  onSelectProfile: (profile: OfficialProfile) => void;
+  onSelectProfile: (profile: OfficialProfile, role: 'Learner' | 'Trainer' | 'Admin') => void;
   onNext: () => void;
   theme: 'light' | 'dark';
 }
 
+const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} viewBox="0 0 24 24">
+    <path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+    />
+  </svg>
+);
+
 export const Step1Login: React.FC<Step1LoginProps> = ({
-  currentProfile,
   onSelectProfile,
   onNext,
   theme,
 }) => {
-  const [tab, setTab] = useState<'demo' | 'google' | 'custom'>('demo');
-  const [customName, setCustomName] = useState('');
-  const [customEmail, setCustomEmail] = useState('');
-  const [customCadre, setCustomCadre] = useState('Central Secretariat Service (CSS)');
-  const [customDesignation, setCustomDesignation] = useState('Section Officer');
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  
+  // Login State
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleSelectOfficial = (p: OfficialProfile) => {
-    onSelectProfile(p);
-    onNext();
-  };
+  // Register State
+  const [fullName, setFullName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [regRole, setRegRole] = useState<'Learner' | 'Trainer'>('Learner');
 
-  const handleGoogleLogin = () => {
-    setGoogleLoading(true);
-    setTimeout(() => {
-      const googleProfile: OfficialProfile = {
-        id: `goog-${Date.now()}`,
-        name: 'Pawar Pyarelal',
-        email: 'pawarapyarelal1024@gmail.com',
-        cadre: 'Indian Administrative Service (IAS)',
-        designation: 'Under Secretary',
-        ministry: 'Ministry of Personnel, Public Grievances and Pensions',
-        department: 'Department of Personnel and Training (DoPT)',
-        experienceYears: 6,
-        currentBand: 'Pay Level 11',
-        targetRole: 'Deputy Secretary / Director',
-        targetGoal: 'e-Governance, Policy Analytics & Public Procurement Modernization',
-        karmaPoints: 420,
-        streakDays: 9,
-        completedCourses: 5,
-      };
-      setGoogleLoading(false);
-      onSelectProfile(googleProfile);
-      onNext();
-    }, 700);
-  };
-
-  const handleCustomRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customName.trim()) return;
-
-    const newProfile: OfficialProfile = {
-      id: `off-${Date.now().toString().slice(-4)}`,
-      name: customName.trim(),
-      email: customEmail.trim() || `${customName.toLowerCase().replace(/\s+/g, '.')}@gov.in`,
-      cadre: customCadre,
-      designation: customDesignation,
-      ministry: 'Ministry of Finance',
-      department: 'Department of Expenditure',
-      experienceYears: 7,
-      currentBand: 'Pay Level 8',
-      targetRole: 'Deputy Secretary / Joint Director',
-      targetGoal: 'Capacity Building & Public Financial Management Master Plan',
-      karmaPoints: 350,
-      streakDays: 7,
-      completedCourses: 4,
-    };
-
-    onSelectProfile(newProfile);
-    onNext();
-  };
+  // UI Feedback State
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const isLight = theme === 'light';
 
+  // Email format validation helper
+  const isValidEmail = (str: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
+  };
+
+  // Quick helper to fill demo credentials
+  const fillDemoCredentials = (roleType: 'Learner' | 'Trainer' | 'Admin') => {
+    setMode('login');
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    if (roleType === 'Learner') {
+      setEmail('rajesh.sharma@gov.in');
+      setPassword('Official@12345');
+    } else if (roleType === 'Trainer') {
+      setEmail('trainer@sih26101.gov.in');
+      setPassword('Trainer@12345');
+    } else if (roleType === 'Admin') {
+      setEmail('admin@sih26101.gov.in');
+      setPassword('Admin@12345');
+    }
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail) {
+      setErrorMsg('Email address is required.');
+      return;
+    }
+    if (!isValidEmail(cleanEmail)) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('Password is required.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await authApi.login({ email: cleanEmail, password });
+      
+      if (res.token && res.user) {
+        localStorage.setItem('pradnyasetu_auth_token', res.token);
+        localStorage.setItem('pradnyasetu_user', JSON.stringify(res.user));
+        localStorage.setItem('pradnyasetu_userRole', res.user.role);
+        localStorage.setItem('pradnyasetu_isLoggedIn', 'true');
+
+        let profileObj: OfficialProfile = {
+          ...SAMPLE_PROFILES[0],
+          id: res.user.id,
+          name: res.user.fullName,
+          email: res.user.email,
+        };
+
+        if (res.user.role === 'Trainer') {
+          profileObj = {
+            ...SAMPLE_PROFILES[0],
+            id: res.user.id,
+            name: res.user.fullName,
+            email: res.user.email,
+            designation: 'Senior Faculty & Master Trainer',
+            department: 'Capacity Building Commission',
+          };
+        } else if (res.user.role === 'Admin') {
+          profileObj = {
+            ...SAMPLE_PROFILES[0],
+            id: res.user.id,
+            name: res.user.fullName,
+            email: res.user.email,
+            designation: 'Chief Administrator',
+            department: 'DoPT Workforce Analytics',
+          };
+        }
+
+        setSuccessMsg(`Authenticated as ${res.user.role}. Redirecting...`);
+        
+        setTimeout(() => {
+          onSelectProfile(profileObj, res.user!.role);
+          onNext();
+        }, 300);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const cleanName = fullName.trim();
+    const cleanEmail = regEmail.trim();
+
+    if (!cleanName) {
+      setErrorMsg('Full Name is required.');
+      return;
+    }
+    if (!cleanEmail) {
+      setErrorMsg('Email address is required.');
+      return;
+    }
+    if (!isValidEmail(cleanEmail)) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+    if (!regPassword) {
+      setErrorMsg('Password is required.');
+      return;
+    }
+    if (regPassword.length < 8) {
+      setErrorMsg('Password must be at least 8 characters long.');
+      return;
+    }
+    if (regPassword !== confirmPassword) {
+      setErrorMsg('Confirm Password does not match.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await authApi.register({
+        fullName: cleanName,
+        email: cleanEmail,
+        password: regPassword,
+        confirmPassword,
+        role: regRole,
+      });
+
+      if (res.token && res.user) {
+        localStorage.setItem('pradnyasetu_auth_token', res.token);
+        localStorage.setItem('pradnyasetu_user', JSON.stringify(res.user));
+        localStorage.setItem('pradnyasetu_userRole', res.user.role);
+        localStorage.setItem('pradnyasetu_isLoggedIn', 'true');
+
+        const newProfile: OfficialProfile = {
+          id: res.user.id,
+          name: res.user.fullName,
+          email: res.user.email,
+          cadre: 'Central Secretariat Service (CSS)',
+          designation: regRole === 'Trainer' ? 'Faculty & Subject Specialist' : 'Assistant Section Officer (ASO)',
+          department: 'Ministry of Statistics & Programme Implementation',
+          ministry: 'MoSPI',
+          experienceYears: 4,
+          currentBand: 'Pay Level 8',
+          targetRole: 'Section Officer & Analytics Lead',
+          targetGoal: 'Capacity Building & Official Statistics Rigor',
+          karmaPoints: 100,
+          streakDays: 1,
+          completedCourses: 0,
+        };
+
+        setSuccessMsg(`Registration successful! Account created as ${res.user.role}.`);
+        
+        setTimeout(() => {
+          onSelectProfile(newProfile, res.user!.role);
+          onNext();
+        }, 300);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Registration failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async (targetRole: 'Learner' | 'Trainer' = regRole) => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setIsLoading(true);
+
+    try {
+      const googleEmail = (mode === 'login' ? email : regEmail).trim() || 'official.google@gov.in';
+      const googleName = fullName.trim() || 'Government Official (Google Auth)';
+
+      const res = await authApi.googleLogin({
+        email: googleEmail,
+        fullName: googleName,
+        role: targetRole,
+      });
+
+      if (res.token && res.user) {
+        localStorage.setItem('pradnyasetu_auth_token', res.token);
+        localStorage.setItem('pradnyasetu_user', JSON.stringify(res.user));
+        localStorage.setItem('pradnyasetu_userRole', res.user.role);
+        localStorage.setItem('pradnyasetu_isLoggedIn', 'true');
+
+        let profileObj: OfficialProfile = {
+          ...SAMPLE_PROFILES[0],
+          id: res.user.id,
+          name: res.user.fullName,
+          email: res.user.email,
+        };
+
+        if (res.user.role === 'Trainer') {
+          profileObj = {
+            ...SAMPLE_PROFILES[0],
+            id: res.user.id,
+            name: res.user.fullName,
+            email: res.user.email,
+            designation: 'Senior Faculty & Master Trainer',
+            department: 'Capacity Building Commission',
+          };
+        }
+
+        setSuccessMsg(`Signed in with Google as ${res.user.role}! Redirecting...`);
+
+        setTimeout(() => {
+          onSelectProfile(profileObj, res.user!.role);
+          onNext();
+        }, 300);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Google authentication failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Title */}
-      <div>
-        <h2 className={`text-2xl font-bold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
-          Official Login / Registration
-        </h2>
-      </div>
-
-      {/* Auth Mode Tabs */}
-      <div className={`flex border-b ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-        <button
-          onClick={() => setTab('demo')}
-          className={`pb-3 px-4 text-xs font-semibold border-b-2 transition-colors ${
-            tab === 'demo'
-              ? 'border-[#0c2340] text-[#0c2340] dark:border-blue-500 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-          }`}
-        >
-          Select Official
-        </button>
-        <button
-          onClick={() => setTab('google')}
-          className={`pb-3 px-4 text-xs font-semibold border-b-2 transition-colors ${
-            tab === 'google'
-              ? 'border-[#0c2340] text-[#0c2340] dark:border-blue-500 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-          }`}
-        >
-          Sign in with Google
-        </button>
-        <button
-          onClick={() => setTab('custom')}
-          className={`pb-3 px-4 text-xs font-semibold border-b-2 transition-colors ${
-            tab === 'custom'
-              ? 'border-[#0c2340] text-[#0c2340] dark:border-blue-500 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-          }`}
-        >
-          New Official Registration
-        </button>
-      </div>
-
-      {/* Tab 1: Demo profiles */}
-      {tab === 'demo' && (
-        <div className="space-y-3">
-          {SAMPLE_PROFILES.map((p) => {
-            const isSelected = p.id === currentProfile.id;
-            return (
-              <div
-                key={p.id}
-                onClick={() => handleSelectOfficial(p)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-4 ${
-                  isSelected
-                    ? isLight
-                      ? 'border-[#0c2340] bg-blue-50/40 ring-1 ring-[#0c2340]'
-                      : 'border-blue-500 bg-blue-950/20 ring-1 ring-blue-500'
-                    : isLight
-                    ? 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                    : 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-800/60'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#0c2340] text-amber-300 font-bold flex items-center justify-center text-sm">
-                    {p.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                        {p.name}
-                      </span>
-                      {isSelected && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {p.designation} • {p.ministry}
-                    </p>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                      {p.cadre} • {p.experienceYears} Years Exp
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-[#0c2340] text-white dark:bg-blue-600'
-                        : isLight
-                        ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    <span>Proceed</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+    <div className="max-w-md mx-auto space-y-6 pt-2 pb-8">
+      <div className={`p-8 rounded-2xl border shadow-sm ${
+        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+      }`}>
+        {/* Header Title */}
+        <div className="text-center mb-6">
+          <h2 className={`text-2xl font-extrabold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
+            {mode === 'login' ? 'User Login' : 'User Registration'}
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            AI-Enabled Skill Intelligence Platform (SIH26101)
+          </p>
         </div>
-      )}
 
-      {/* Tab 2: Google Sign In */}
-      {tab === 'google' && (
-        <div className={`p-8 rounded-xl border text-center space-y-4 ${
-          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-        }`}>
-          <div className="max-w-md mx-auto space-y-4">
-            <button
-              onClick={handleGoogleLogin}
-              disabled={googleLoading}
-              className={`w-full py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-3 border shadow-xs transition-all ${
-                isLight
-                  ? 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
-              }`}
-            >
-              {/* Google G Logo SVG */}
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-              <span>{googleLoading ? 'Connecting...' : 'Continue with Google Account'}</span>
-            </button>
-            <p className="text-xs text-slate-500">
-              Signs in with your registered official or personal Google ID.
-            </p>
+        {/* Tab Switcher: Login vs Register */}
+        <div className="flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('login');
+              setErrorMsg(null);
+              setSuccessMsg(null);
+            }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              mode === 'login'
+                ? 'bg-[#0c2340] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('register');
+              setErrorMsg(null);
+              setSuccessMsg(null);
+            }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              mode === 'register'
+                ? 'bg-[#0c2340] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            Register
+          </button>
+        </div>
+
+        {/* Error Alert */}
+        {errorMsg && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-300 text-rose-700 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{errorMsg}</span>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Tab 3: Custom Registration */}
-      {tab === 'custom' && (
-        <form onSubmit={handleCustomRegister} className={`p-6 rounded-xl border space-y-4 ${
-          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-        }`}>
-          <div className="grid sm:grid-cols-2 gap-4">
+        {/* Success Alert */}
+        {successMsg && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-300 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* 1. LOGIN FORM */}
+        {mode === 'login' ? (
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                Official Full Name
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Ramesh Kumar"
-                value={customName}
-                onChange={e => setCustomName(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg text-xs border ${
-                  isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-white'
-                }`}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                Government Email ID
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Email Address <span className="text-rose-500">*</span>
               </label>
               <input
                 type="email"
-                placeholder="e.g. ramesh.k@gov.in"
-                value={customEmail}
-                onChange={e => setCustomEmail(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg text-xs border ${
-                  isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-white'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="official@gov.in"
+                required
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs transition-colors outline-none ${
+                  isLight 
+                    ? 'border-slate-300 bg-white text-slate-800 focus:border-[#0c2340]' 
+                    : 'border-slate-700 bg-slate-800 text-white focus:border-blue-500'
                 }`}
               />
             </div>
+
             <div>
-              <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                Service Cadre
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Password <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={customCadre}
-                onChange={e => setCustomCadre(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg text-xs border ${
-                  isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-white'
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                required
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs transition-colors outline-none ${
+                  isLight 
+                    ? 'border-slate-300 bg-white text-slate-800 focus:border-[#0c2340]' 
+                    : 'border-slate-700 bg-slate-800 text-white focus:border-blue-500'
+                }`}
+              />
+            </div>
+
+            <div className="pt-2 space-y-3">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#0c2340] hover:bg-[#15345a] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>{isLoading ? 'Authenticating...' : 'Login'}</span>
+              </button>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase">
+                  <span className="bg-white dark:bg-slate-900 px-2 text-slate-400 font-bold tracking-wider">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleGoogleAuth('Learner')}
+                disabled={isLoading}
+                className={`w-full py-2.5 px-4 rounded-xl border font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2.5 cursor-pointer ${
+                  isLight 
+                    ? 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700' 
+                    : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
                 }`}
               >
-                <option value="Central Secretariat Service (CSS)">Central Secretariat Service (CSS)</option>
-                <option value="Indian Administrative Service (IAS)">Indian Administrative Service (IAS)</option>
-                <option value="Indian Revenue Service (IRS)">Indian Revenue Service (IRS)</option>
-                <option value="State Civil Services (SCS)">State Civil Services (SCS)</option>
-              </select>
+                <GoogleIcon className="w-4 h-4" />
+                <span>Continue with Google</span>
+              </button>
             </div>
+
+            {/* Helper Switch link */}
+            <div className="text-center pt-3 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('register');
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                  }}
+                  className="font-bold text-[#0c2340] dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  Register
+                </button>
+              </p>
+            </div>
+          </form>
+        ) : (
+          /* 2. REGISTRATION FORM */
+          <form onSubmit={handleRegisterSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                Designation
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Full Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Ramesh Chandra"
                 required
-                value={customDesignation}
-                onChange={e => setCustomDesignation(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg text-xs border ${
-                  isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-white'
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs transition-colors outline-none ${
+                  isLight 
+                    ? 'border-slate-300 bg-white text-slate-800 focus:border-[#0c2340]' 
+                    : 'border-slate-700 bg-slate-800 text-white focus:border-blue-500'
                 }`}
               />
             </div>
-          </div>
 
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-lg bg-[#0c2340] hover:bg-[#133560] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            >
-              <span>Register & Continue</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </form>
-      )}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Email Address <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="official@gov.in"
+                required
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs transition-colors outline-none ${
+                  isLight 
+                    ? 'border-slate-300 bg-white text-slate-800 focus:border-[#0c2340]' 
+                    : 'border-slate-700 bg-slate-800 text-white focus:border-blue-500'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Password (min. 8 characters) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={regPassword}
+                onChange={(e) => setRegPassword(e.target.value)}
+                placeholder="••••••••••••"
+                required
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs transition-colors outline-none ${
+                  isLight 
+                    ? 'border-slate-300 bg-white text-slate-800 focus:border-[#0c2340]' 
+                    : 'border-slate-700 bg-slate-800 text-white focus:border-blue-500'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Confirm Password <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••••••"
+                required
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs transition-colors outline-none ${
+                  isLight 
+                    ? 'border-slate-300 bg-white text-slate-800 focus:border-[#0c2340]' 
+                    : 'border-slate-700 bg-slate-800 text-white focus:border-blue-500'
+                }`}
+              />
+            </div>
+
+            {/* Role Options - ONLY Learner and Trainer (No Admin option!) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Role <span className="text-rose-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'Learner', label: 'Official / Learner' },
+                  { id: 'Trainer', label: 'Trainer' },
+                ].map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRegRole(r.id as 'Learner' | 'Trainer')}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border text-center transition-all cursor-pointer ${
+                      regRole === r.id
+                        ? 'bg-[#0c2340] text-white border-[#0c2340] shadow-xs'
+                        : isLight
+                        ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 space-y-3">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#0c2340] hover:bg-[#15345a] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>{isLoading ? 'Creating Account...' : 'Create Account'}</span>
+              </button>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase">
+                  <span className="bg-white dark:bg-slate-900 px-2 text-slate-400 font-bold tracking-wider">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleGoogleAuth(regRole)}
+                disabled={isLoading}
+                className={`w-full py-2.5 px-4 rounded-xl border font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2.5 cursor-pointer ${
+                  isLight 
+                    ? 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700' 
+                    : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+                }`}
+              >
+                <GoogleIcon className="w-4 h-4" />
+                <span>Continue with Google</span>
+              </button>
+            </div>
+
+            {/* Helper Switch link */}
+            <div className="text-center pt-3 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                  }}
+                  className="font-bold text-[#0c2340] dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  Login
+                </button>
+              </p>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Pre-seeded Credentials Card (Quick Demo Access) */}
+      <div className={`p-4 rounded-xl border text-xs space-y-2 ${
+        isLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-800/60 border-slate-700 text-slate-300'
+      }`}>
+        <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
+          <ShieldAlert className="w-4 h-4 text-blue-600" />
+          <span>Quick Demo Login Credentials</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+          <button
+            type="button"
+            onClick={() => fillDemoCredentials('Learner')}
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left hover:border-blue-500 cursor-pointer"
+          >
+            <div className="font-bold text-[#0c2340] dark:text-blue-400">Official / Learner</div>
+            <div className="text-[10px] text-slate-500 truncate">rajesh.sharma@gov.in</div>
+            <div className="text-[10px] text-slate-400">Official@12345</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fillDemoCredentials('Trainer')}
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left hover:border-blue-500 cursor-pointer"
+          >
+            <div className="font-bold text-[#0c2340] dark:text-blue-400">Trainer</div>
+            <div className="text-[10px] text-slate-500 truncate">trainer@sih26101.gov.in</div>
+            <div className="text-[10px] text-slate-400">Trainer@12345</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fillDemoCredentials('Admin')}
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left hover:border-blue-500 cursor-pointer"
+          >
+            <div className="font-bold text-[#0c2340] dark:text-blue-400">Administrator</div>
+            <div className="text-[10px] text-slate-500 truncate">admin@sih26101.gov.in</div>
+            <div className="text-[10px] text-slate-400">Admin@12345</div>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

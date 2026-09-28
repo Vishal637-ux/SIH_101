@@ -969,36 +969,42 @@ class CompetencyDataStore {
     jobRole: string;
     department: string;
     assessmentType?: 'ROLE_BASELINE' | 'PERIODIC_REVIEW' | 'MODULE_EVALUATION' | 'REASSESSMENT';
+    domain?: CompetencyDomain;
   }): AssessmentSession {
-    const { userId, officialName, jobRole, department, assessmentType = 'REASSESSMENT' } = params;
+    const { userId, officialName, jobRole, department, assessmentType = 'REASSESSMENT', domain } = params;
 
     // Determine past attempts
     const history = this.getOfficialHistory(userId);
     const attemptNumber = history.length + 1;
 
-    // Identify role-mapped competencies
-    const requirements = this.getRoleRequirements(jobRole, department);
-    const requiredCompIds = new Set(requirements.map(r => r.competencyId));
+    let competenciesList: CompetencyDefinition[] = [];
+    let selectedQuestions: AssessmentQuestionData[] = [];
 
-    // Filter relevant competencies
-    const relevantCompetencies = this.framework.filter(c => requiredCompIds.has(c.id));
-    const competenciesList = relevantCompetencies.length > 0 ? relevantCompetencies : this.framework.slice(0, 6);
+    if (domain) {
+      // Filter competencies and questions by domain
+      competenciesList = this.framework.filter(c => c.domain === domain);
+      selectedQuestions = this.questions.filter(q => q.domain === domain);
+    } else {
+      // Identify role-mapped competencies
+      const requirements = this.getRoleRequirements(jobRole, department);
+      const requiredCompIds = new Set(requirements.map(r => r.competencyId));
 
-    // Collect questions mapped to these competencies
-    const selectedQuestions: AssessmentQuestionData[] = [];
-    for (const comp of competenciesList) {
-      const compQuestions = this.questions.filter(q => q.competencyId === comp.id);
-      if (compQuestions.length > 0) {
-        selectedQuestions.push(...compQuestions);
+      const relevantCompetencies = this.framework.filter(c => requiredCompIds.has(c.id));
+      competenciesList = relevantCompetencies.length > 0 ? relevantCompetencies : this.framework.slice(0, 6);
+
+      for (const comp of competenciesList) {
+        const compQuestions = this.questions.filter(q => q.competencyId === comp.id);
+        if (compQuestions.length > 0) {
+          selectedQuestions.push(...compQuestions);
+        }
       }
-    }
 
-    // Ensure we have a robust set of questions (at least 6-10 questions)
-    if (selectedQuestions.length < 6) {
-      for (const q of this.questions) {
-        if (!selectedQuestions.some(sq => sq.id === q.id)) {
-          selectedQuestions.push(q);
-          if (selectedQuestions.length >= 8) break;
+      if (selectedQuestions.length < 6) {
+        for (const q of this.questions) {
+          if (!selectedQuestions.some(sq => sq.id === q.id)) {
+            selectedQuestions.push(q);
+            if (selectedQuestions.length >= 8) break;
+          }
         }
       }
     }
@@ -1027,7 +1033,6 @@ class CompetencyDataStore {
         scenarioContext: q.scenarioContext,
         options: [...q.options],
         selectedAnswerIndex: undefined,
-        // hide correct answer while in progress
         correctAnswerIndex: undefined,
         isCorrect: undefined,
         explanation: undefined

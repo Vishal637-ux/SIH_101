@@ -1,54 +1,90 @@
 import React from 'react';
-import { OfficialProfile, LearningPathwayItem, Module07HandoffPayload } from '../../types';
-import { RecommendationDashboard } from '../RecommendationDashboard';
-import { ArrowLeft } from 'lucide-react';
+import { OfficialProfile } from '../../types';
+import { Sparkles, ArrowRight, BookOpen } from 'lucide-react';
 
-interface Step5PathwayProps {
+interface Step5Props {
   profile: OfficialProfile;
-  pathways: LearningPathwayItem[];
-  selectedPathwayId: string;
-  onSelectPathway: (id: string) => void;
   onNext: () => void;
-  onBack: () => void;
-  onNavigateToIntegrations?: () => void;
+  onBack?: () => void;
   theme: 'light' | 'dark';
 }
 
-export const Step5Pathway: React.FC<Step5PathwayProps> = ({
-  profile,
+export const Step5Pathway: React.FC<Step5Props> = ({
   onNext,
-  onBack,
-  onNavigateToIntegrations,
+  theme,
 }) => {
-  const handleStartLearning = (handoff: Module07HandoffPayload) => {
-    // Transition to Module 07 Learning Experience (Step 6/7)
-    onNext();
-  };
+  const isLight = theme === 'light';
+
+  // Rule 7 exact recommendations
+  const recommendations = [
+    { title: 'Advanced Statistical Analysis', category: 'Statistics', hours: '6 Hours', provider: 'NSSTA / iGOT' },
+    { title: 'Python for Data Analysis', category: 'Python', hours: '8 Hours', provider: 'iGOT Karmayogi' },
+    { title: 'Data Visualization', category: 'Data Analysis', hours: '5 Hours', provider: 'TPAC' },
+    { title: 'Communication Skills', category: 'Communication', hours: '4 Hours', provider: 'Platform Content' },
+  ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Top Breadcrumb */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Skill-Gap Analysis</span>
-        </button>
-
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Title */}
+      <div className="border-b pb-4 border-slate-200 dark:border-slate-800">
+        <h2 className={`text-2xl font-extrabold ${isLight ? 'text-[#0c2340]' : 'text-slate-100'}`}>
           Recommended for You
-        </span>
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          AI-curated learning interventions directly targeted at bridging your identified competency gaps
+        </p>
       </div>
 
-      {/* Main Module 05 Recommendation Dashboard */}
-      <RecommendationDashboard
-        profile={profile}
-        onStartLearning={handleStartLearning}
-        onBackToSkillGaps={onBack}
-        onNavigateToIntegrations={onNavigateToIntegrations}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {recommendations.map((item, idx) => (
+          <div
+            key={idx}
+            className={`p-5 rounded-2xl border flex flex-col justify-between transition-all ${
+              isLight ? 'bg-white border-slate-200 shadow-xs hover:border-slate-300' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            <div>
+              {/* Badge: Based on your skill gap */}
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-700 border border-blue-300 dark:text-blue-300 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-blue-600" />
+                  Based on your skill gap
+                </span>
+              </div>
+
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">
+                {item.title}
+              </h3>
+              <p className="text-xs text-slate-500">
+                Category: <span className="font-semibold text-slate-700 dark:text-slate-300">{item.category}</span> • {item.hours}
+              </p>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-600 dark:text-slate-400">
+                Provider: {item.provider}
+              </span>
+              <button
+                onClick={onNext}
+                className="font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Start Learning</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="pt-2 flex justify-end">
+        <button
+          onClick={onNext}
+          className="py-2.5 px-6 rounded-xl bg-[#0c2340] hover:bg-[#15345a] text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+        >
+          <span>Go to Personalized Learning</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 };

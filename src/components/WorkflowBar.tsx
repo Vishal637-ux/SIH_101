@@ -23,16 +23,16 @@ interface WorkflowBarProps {
 }
 
 export const WORKFLOW_STEPS = [
-  { id: 1, title: 'Login', icon: LogIn },
-  { id: 2, title: 'Profile', icon: User },
-  { id: 3, title: 'Competencies', icon: Award },
-  { id: 4, title: 'Skill Gaps', icon: Target },
-  { id: 5, title: 'Recommendations', icon: Sparkles },
-  { id: 6, title: 'Learning', icon: BrainCircuit },
-  { id: 7, title: 'Assessment', icon: CheckSquare },
-  { id: 8, title: 'Score Uplift', icon: TrendingUp },
-  { id: 9, title: 'Analytics', icon: BarChart3 },
-  { id: 10, title: 'Continuous Loop', icon: Repeat },
+  { id: 1, title: 'LOGIN / REGISTER', icon: LogIn },
+  { id: 2, title: 'OFFICIAL PROFILE', icon: User },
+  { id: 3, title: 'COMPETENCY ASSESSMENT', icon: Award },
+  { id: 4, title: 'SKILL-GAP ANALYSIS', icon: Target },
+  { id: 5, title: 'AI RECOMMENDATION', icon: Sparkles },
+  { id: 6, title: 'PERSONALIZED LEARNING', icon: BrainCircuit },
+  { id: 7, title: 'AI CONTENT ADAPTATION', icon: CheckSquare },
+  { id: 8, title: 'AI-BASED ASSESSMENT', icon: TrendingUp },
+  { id: 9, title: 'PROGRESS & PERFORMANCE', icon: BarChart3 },
+  { id: 10, title: 'COMPETENCY PROFILE UPDATE', icon: Repeat },
 ];
 
 export const WorkflowBar: React.FC<WorkflowBarProps> = ({

@@ -574,7 +574,8 @@ The United Nations Fundamental Principles of Official Statistics and the MoSPI N
 
       if (item.content_type === 'PDF') {
         try {
-          const pdfParse = (await import('pdf-parse')).default;
+          const pdfModule = (await import('pdf-parse')) as any;
+          const pdfParse = pdfModule.default || pdfModule;
           const parsed = await pdfParse(fileBuffer);
           rawText = parsed.text || fileBuffer.toString('utf-8');
           pageCount = parsed.numpages || 1;

@@ -196,54 +196,59 @@ class SkillGapDataStore {
     if (!userGapMap) {
       userGapMap = new Map();
       this.userGaps.set(userId, userGapMap);
+    } else {
+      userGapMap.clear();
+    }
+
+    if (!currentCompetencies || currentCompetencies.length === 0) {
+      return [];
     }
 
     const calculatedRecords: SkillGapRecord[] = [];
     const now = new Date().toISOString();
 
-    // Map each role requirement against official's verified competency
-    requirements.forEach(req => {
-      const verifiedComp = currentCompetencies.find(c => c.competencyId === req.competencyId);
-      const compDef = framework.find(f => f.id === req.competencyId);
+    // Map each verified competency of the user against role requirement
+    currentCompetencies.forEach(verifiedComp => {
+      const req = requirements.find(r => r.competencyId === verifiedComp.competencyId);
+      const compDef = framework.find(f => f.id === verifiedComp.competencyId);
 
-      const requiredLevel = Number(req.requiredProficiency.toFixed(1));
-      const currentLevel = verifiedComp ? Number(verifiedComp.currentProficiency.toFixed(1)) : 1.0;
+      const requiredLevel = req ? Number(req.requiredProficiency.toFixed(1)) : 4.0;
+      const currentLevel = Number(verifiedComp.currentProficiency.toFixed(1));
 
       // CORE FORMULA: Skill Gap = Required - Current (Guaranteed Non-Negative)
       const rawGap = requiredLevel - currentLevel;
       const gapValue = Math.max(0, Number(rawGap.toFixed(1)));
 
-      const { priority, severity, status } = calculateGapPriority(gapValue, req.priority);
+      const importance = req ? req.priority : 'Core';
+      const { priority, severity, status } = calculateGapPriority(gapValue, importance);
 
-      const recordId = `gap-${userId}-${req.competencyId}`;
-      const existing = userGapMap!.get(req.competencyId);
+      const recordId = `gap-${userId}-${verifiedComp.competencyId}`;
+      const existing = userGapMap!.get(verifiedComp.competencyId);
 
       const record: SkillGapRecord = {
         id: recordId,
         userId,
-        competencyId: req.competencyId,
-        competencyCode: compDef ? compDef.code : req.competencyId,
-        competencyName: compDef ? compDef.name : req.competencyId,
-        domain: compDef ? compDef.domain : 'Statistical',
+        competencyId: verifiedComp.competencyId,
+        competencyCode: compDef ? compDef.code : verifiedComp.competencyId,
+        competencyName: verifiedComp.competencyName || compDef?.name || verifiedComp.competencyId,
+        domain: verifiedComp.domain || compDef?.domain || 'Statistical',
         requiredProficiency: requiredLevel,
         currentProficiency: currentLevel,
         gapValue,
         priority,
         severity,
         status,
-        importance: req.priority,
+        importance,
         standardBenchmarkRequired: compDef?.standardBenchmarks[Math.round(requiredLevel)],
-        evidenceSummary: verifiedComp
-          ? verifiedComp.evidenceSummary
-          : 'Pending verified assessment in Module 03',
-        latestAssessmentReference: verifiedComp ? verifiedComp.assessmentSessionId : 'unassessed',
-        lastAssessedAt: verifiedComp ? verifiedComp.lastAssessedAt : now,
+        evidenceSummary: verifiedComp.evidenceSummary || 'Verified through Module 03 Assessment',
+        latestAssessmentReference: verifiedComp.assessmentSessionId || 'assessed',
+        lastAssessedAt: verifiedComp.lastAssessedAt || now,
         calculatedAt: now,
         createdAt: existing ? existing.createdAt : now,
         updatedAt: now,
       };
 
-      userGapMap!.set(req.competencyId, record);
+      userGapMap!.set(verifiedComp.competencyId, record);
       calculatedRecords.push(record);
     });
 

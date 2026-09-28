@@ -63,70 +63,39 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="h-1 w-full bg-gradient-to-r from-[#FF9933] via-white to-[#138808]" />
 
       <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
-        {/* LEFT: Sidebar Toggle + iGOT Karmayogi Branding */}
+        {/* LEFT: Sidebar Toggle & PradnyaSetu Branding */}
         <div className="flex items-center gap-3">
           {isLoggedIn && (
             <button
               onClick={onToggleSidebar}
-              title={isSidebarOpen ? 'Close Navigation Sidebar' : 'Open Navigation Sidebar'}
               className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                isSidebarOpen
-                  ? 'bg-[#0c2340] text-white border-[#0c2340]'
-                  : isLight
-                  ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                  : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                isLight 
+                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800' 
+                  : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
               }`}
+              title={isSidebarOpen ? 'Collapse Menu' : 'Expand Menu'}
             >
-              <PanelLeft className="w-4 h-4" />
+              <PanelLeft className="w-5 h-5" />
             </button>
           )}
 
           <div 
             onClick={onNavigateToDashboard}
-            className="flex items-center gap-2.5 cursor-pointer group"
+            className="flex items-center cursor-pointer group py-0.5"
+            title="PradnyaSetu Dashboard"
           >
-            <div className="w-9 h-9 rounded-lg bg-[#0c2340] text-amber-400 font-black flex items-center justify-center text-xs shadow border border-amber-400/30 group-hover:bg-[#15345a] transition-colors">
-              <span className="tracking-tighter">iGOT</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className={`text-base font-extrabold tracking-tight ${isLight ? 'text-[#0c2340]' : 'text-white'}`}>
-                  Karmayogi Bharat
-                </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 border border-amber-500/30 dark:text-amber-300">
-                  AI Skill Platform
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-none mt-0.5">
-                Government Competency & Learning Portal
-              </p>
+            <div className={`px-2 py-1 rounded-lg transition-transform group-hover:scale-[1.02] ${isLight ? 'bg-transparent' : 'bg-white/95 shadow-sm'}`}>
+              <img 
+                src="/logo.png" 
+                alt="PradnyaSetu Logo" 
+                className="h-9 sm:h-11 w-auto object-contain"
+              />
             </div>
           </div>
         </div>
 
-        {/* RIGHT: Stats, Notifications, Theme & Profile Avatar */}
+        {/* RIGHT: Notifications, Theme & Profile Avatar */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Karma & Streak Stats */}
-          {isLoggedIn && (
-            <div className="hidden sm:flex items-center gap-2 text-xs">
-              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold border ${
-                isLight 
-                  ? 'bg-amber-50 text-amber-800 border-amber-200' 
-                  : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-              }`}>
-                <Award className="w-3.5 h-3.5 text-amber-500" />
-                <span>{profile.karmaPoints}</span>
-              </div>
-              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold border ${
-                isLight
-                  ? 'bg-orange-50 text-orange-800 border-orange-200'
-                  : 'bg-orange-500/10 text-orange-300 border-orange-500/20'
-              }`}>
-                <Flame className="w-3.5 h-3.5 text-orange-500" />
-                <span>{profile.streakDays}d</span>
-              </div>
-            </div>
-          )}
 
           {/* Notifications Bell */}
           {isLoggedIn && (

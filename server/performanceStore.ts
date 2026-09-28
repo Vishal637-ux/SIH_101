@@ -207,7 +207,7 @@ export class PerformanceStore {
   // ============================================================================
 
   public getLearningHours(learnerId: string): LearningHoursSummary {
-    const progressList = learningStore.getUserProgressList(learnerId);
+    const progressList = learningStore.getAllUserProgress(learnerId);
     const historyList = learningStore.getUserHistory(learnerId);
 
     let totalMinutes = 0;
@@ -405,7 +405,7 @@ export class PerformanceStore {
 
   public getLearnerProgressSummary(learnerId: string): LearnerProgressSummary {
     const profile = profileStore.getProfile(learnerId);
-    const progressList = learningStore.getUserProgressList(learnerId);
+    const progressList = learningStore.getAllUserProgress(learnerId);
     const hours = this.getLearningHours(learnerId);
     const topicRecords = this.getTopicPerformance(learnerId);
     const attempts = assessmentStore.getLearnerAttempts(learnerId);

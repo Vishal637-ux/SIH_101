@@ -27,10 +27,25 @@ import { ContentDetailView } from './components/ContentDetailView';
 import { AssessmentManagementDashboard } from './components/assessments/AssessmentManagementDashboard';
 import { DashboardView } from './components/DashboardView';
 import { Sidebar } from './components/Sidebar';
+import { CrossCuttingFeatures } from './components/CrossCuttingFeatures';
 
 export default function App() {
   // Theme state: light theme as requested, matching Karmayogi
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  // Active Role state: Learner (Government Official), Trainer, or Admin (Persisted)
+  const [userRole, setUserRole] = useState<'Learner' | 'Trainer' | 'Admin'>(() => {
+    const saved = localStorage.getItem('pradnyasetu_userRole');
+    return (saved === 'Trainer' || saved === 'Admin') ? saved : 'Learner';
+  });
 
   // Sidebar open state (Left sidebar)
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
@@ -47,10 +62,18 @@ export default function App() {
   const [showAssessmentsView, setShowAssessmentsView] = useState<boolean>(false);
   const [assessmentTargetContentId, setAssessmentTargetContentId] = useState<string | null>(null);
 
-  // Auth & Profile State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
+  // Auth & Profile State (Persisted in localStorage)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('pradnyasetu_isLoggedIn') === 'true';
+  });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
-  const [profile, setProfile] = useState<OfficialProfile>(SAMPLE_PROFILES[0]);
+  const [profile, setProfile] = useState<OfficialProfile>(() => {
+    const saved = localStorage.getItem('pradnyasetu_profile');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return SAMPLE_PROFILES[0];
+  });
   const [competencies, setCompetencies] = useState<CompetencyItem[]>(INITIAL_COMPETENCIES);
 
   // Gap Analysis & Recommendations State
@@ -454,6 +477,17 @@ export default function App() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setUserRole('Learner');
+    localStorage.removeItem('pradnyasetu_auth_token');
+    localStorage.removeItem('pradnyasetu_user');
+    localStorage.removeItem('pradnyasetu_isLoggedIn');
+    localStorage.removeItem('pradnyasetu_userRole');
+    localStorage.removeItem('pradnyasetu_profile');
+    setShowAssessmentsView(false);
+    setShowContentView(false);
+    setShowIntegrationsView(false);
+    setSelectedContentId(null);
+    setActiveView('workflow');
     setCurrentStep(1);
   };
 
@@ -510,15 +544,20 @@ export default function App() {
         theme={theme}
         profile={profile}
         isLoggedIn={isLoggedIn}
-        onNavigateToDashboard={handleNavigateToDashboard}
-        onOpenProfile={() => handleSelectStep(2)}
-        onNavigateToSkillGaps={() => handleSelectStep(4)}
-        onNavigateToRecommendations={() => handleSelectStep(5)}
-        onNavigateToIntegrations={handleNavigateToIntegrations}
-        onNavigateToLearning={() => handleSelectStep(6)}
-        onNavigateToContent={() => handleNavigateToContent()}
-        onNavigateToAssessments={() => handleNavigateToAssessments()}
-        onNavigateToProgress={() => handleSelectStep(9)}
+        userRole={userRole}
+        onNavigate={(navId) => {
+          if (navId === 'dashboard') handleNavigateToDashboard();
+          else if (navId === 'profile') handleSelectStep(2);
+          else if (navId === 'skills' || navId === 'competency-analytics') handleSelectStep(3);
+          else if (navId === 'skill-gaps' || navId === 'dept-analytics') handleSelectStep(4);
+          else if (navId === 'recommendations') handleSelectStep(5);
+          else if (navId === 'learning' || navId === 'manage-courses' || navId === 'training-programs') handleSelectStep(6);
+          else if (navId === 'assessments' || navId === 'question-bank' || navId === 'assessment-reports') handleSelectStep(7);
+          else if (navId === 'progress' || navId === 'performance' || navId === 'reports') handleSelectStep(9);
+          else if (navId === 'upload-content' || navId === 'ai-content-gen' || navId === 'platform-content') handleNavigateToContent();
+          else if (navId === 'external-integration') handleNavigateToIntegrations();
+          else handleNavigateToDashboard();
+        }}
         onLogoutClick={handleLogout}
       />
 
@@ -538,7 +577,22 @@ export default function App() {
 
         {/* Main Content Area */}
         <main className="max-w-7xl mx-auto px-4 py-8">
-        {showAssessmentsView ? (
+        {!isLoggedIn ? (
+          <Step1Login
+            currentProfile={profile}
+            onSelectProfile={(p, selectedRole) => {
+              setProfile(p);
+              setUserRole(selectedRole);
+              setIsLoggedIn(true);
+              localStorage.setItem('pradnyasetu_isLoggedIn', 'true');
+              localStorage.setItem('pradnyasetu_userRole', selectedRole);
+              localStorage.setItem('pradnyasetu_profile', JSON.stringify(p));
+              handleNavigateToDashboard();
+            }}
+            onNext={handleNext}
+            theme={theme}
+          />
+        ) : showAssessmentsView ? (
           <AssessmentManagementDashboard
             initialContentId={assessmentTargetContentId}
             onNavigateToLearning={() => {
@@ -553,7 +607,7 @@ export default function App() {
               setShowAssessmentsView(false);
               handleSelectStep(5);
             }}
-            userRole="Trainer"
+            userRole={userRole === 'Learner' ? 'Learner' : 'Trainer'}
           />
         ) : showContentView ? (
           selectedContentId ? (
@@ -601,6 +655,7 @@ export default function App() {
             gapResult={gapResult}
             pathways={pathways}
             theme={theme}
+            userRole={userRole}
             onNavigateToProfile={() => handleSelectStep(2)}
             onNavigateToSkills={() => handleSelectStep(3)}
             onNavigateToSkillGaps={() => handleSelectStep(4)}
@@ -615,9 +670,13 @@ export default function App() {
             {currentStep === 1 && (
               <Step1Login
                 currentProfile={profile}
-                onSelectProfile={(p) => {
+                onSelectProfile={(p, selectedRole) => {
                   setProfile(p);
+                  setUserRole(selectedRole);
                   setIsLoggedIn(true);
+                  localStorage.setItem('pradnyasetu_isLoggedIn', 'true');
+                  localStorage.setItem('pradnyasetu_userRole', selectedRole);
+                  localStorage.setItem('pradnyasetu_profile', JSON.stringify(p));
                   handleNavigateToDashboard();
                 }}
                 onNext={handleNext}
@@ -639,10 +698,6 @@ export default function App() {
               <Step3AssessmentGap
                 profile={profile}
                 competencies={competencies}
-                gapResult={gapResult}
-                onUpdateCompetency={handleUpdateCompetency}
-                onRunGapAnalysis={runGapAnalysis}
-                isLoading={isGapLoading}
                 onNext={handleNext}
                 onBack={handleBack}
                 theme={theme}
@@ -652,10 +707,9 @@ export default function App() {
             {currentStep === 4 && (
               <Step4Recommendation
                 profile={profile}
-                competencies={competencies}
-                gapResult={gapResult}
                 onNext={handleNext}
                 onBack={handleBack}
+                onNavigateToAssessments={() => handleSelectStep(3)}
                 theme={theme}
               />
             )}
@@ -663,12 +717,8 @@ export default function App() {
             {currentStep === 5 && (
               <Step5Pathway
                 profile={profile}
-                pathways={pathways}
-                selectedPathwayId={selectedPathwayId}
-                onSelectPathway={setSelectedPathwayId}
                 onNext={handleNext}
                 onBack={handleBack}
-                onNavigateToIntegrations={handleNavigateToIntegrations}
                 theme={theme}
               />
             )}
@@ -676,8 +726,6 @@ export default function App() {
             {currentStep === 6 && (
               <Step6LearningExperience
                 profile={profile}
-                extractedContent={extractedContent}
-                onUpdateExtractedContent={setExtractedContent}
                 onNext={handleNext}
                 onBack={handleBack}
                 theme={theme}
@@ -687,9 +735,6 @@ export default function App() {
             {currentStep === 7 && (
               <Step7Assessment
                 profile={profile}
-                questions={extractedContent.assessmentQuestions}
-                evaluation={evaluation}
-                onSubmitEvaluation={handleAssessmentSubmit}
                 onNext={handleNext}
                 onBack={handleBack}
                 theme={theme}
@@ -699,8 +744,6 @@ export default function App() {
             {currentStep === 8 && (
               <Step8CompetencyUpdate
                 profile={profile}
-                evaluation={evaluation}
-                competencies={competencies}
                 onNext={handleNext}
                 onBack={handleBack}
                 theme={theme}
@@ -710,7 +753,6 @@ export default function App() {
             {currentStep === 9 && (
               <Step9Analytics
                 profile={profile}
-                competencies={competencies}
                 onNext={handleNext}
                 onBack={handleBack}
                 theme={theme}
@@ -720,7 +762,6 @@ export default function App() {
             {currentStep === 10 && (
               <Step10ContinuousLearning
                 profile={profile}
-                competencies={competencies}
                 onTriggerNewCycle={handleTriggerNewCycle}
                 onBack={handleBack}
                 theme={theme}
@@ -728,6 +769,9 @@ export default function App() {
             )}
           </>
         )}
+
+        {/* Cross-Cutting Features Footer Section (Rule 16) */}
+        <CrossCuttingFeatures theme={theme} />
       </main>
       </div>
 
