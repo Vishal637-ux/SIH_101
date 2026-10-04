@@ -940,16 +940,22 @@ class CompetencyDataStore {
   }
 
   // Retrieve role requirements mapped to role
-  public getRoleRequirements(jobRole: string, department?: string): CompetencyRequirement[] {
+  public getRoleRequirements(jobRole?: string, department?: string): CompetencyRequirement[] {
+    const roleStr = String(jobRole || '').toLowerCase();
     const matched = this.requirements.filter(r => 
-      r.jobRole.toLowerCase() === jobRole.toLowerCase() ||
-      jobRole.toLowerCase().includes(r.jobRole.toLowerCase())
+      r.jobRole.toLowerCase() === roleStr ||
+      (roleStr && roleStr.includes(r.jobRole.toLowerCase()))
     );
 
     if (matched.length > 0) return matched;
 
     // Fallback to Assistant Section Officer requirements
     return this.requirements.filter(r => r.jobRole.includes('Assistant Section Officer'));
+  }
+
+  // Get questions list
+  public getQuestions(): AssessmentQuestionData[] {
+    return this.questions;
   }
 
   // Get current competencies for official

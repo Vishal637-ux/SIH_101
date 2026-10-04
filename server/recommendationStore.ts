@@ -493,108 +493,81 @@ class RecommendationDataStore {
       userRecs = new Map();
       this.userRecommendations.set(userId, userRecs);
     }
+    userRecs.clear();
+
+    // If user has not completed assessment or has 0 assessed competencies
+    if (!currentCompetencies || currentCompetencies.length === 0) {
+      return [];
+    }
+
+    // PHASE 5 STRICT RULE: Only recommend learning for competencies where Skill Gap > 0
+    const activeGaps = gaps.filter(g => g.gapValue > 0);
+    if (activeGaps.length === 0) {
+      return [];
+    }
 
     const calculatedRecords: RecommendationRecord[] = [];
     const now = new Date().toISOString();
 
-    // Iterate through available learning resources and evaluate match against official's gaps
-    this.resources.forEach(resource => {
-      // Find matching gap from Module 04
-      const matchingGap = gaps.find(g => g.competencyId === resource.primaryCompetencyId);
-      const verifiedComp = currentCompetencies.find(c => c.competencyId === resource.primaryCompetencyId);
+    // Iterate over active gaps (> 0) and find matching curated learning resources
+    activeGaps.forEach(matchingGap => {
+      const matchingResources = this.resources.filter(
+        r => r.primaryCompetencyId === matchingGap.competencyId || r.competencyName.toLowerCase() === matchingGap.competencyName.toLowerCase()
+      );
 
-      const currentLevel = matchingGap ? matchingGap.currentProficiency : (verifiedComp ? verifiedComp.currentProficiency : 2.5);
-      const requiredLevel = matchingGap ? matchingGap.requiredProficiency : 3.5;
-      const gapValue = matchingGap ? matchingGap.gapValue : 0;
-      const priority = matchingGap ? matchingGap.priority : 'None';
-      const gapId = matchingGap ? matchingGap.id : `gap-none-${resource.primaryCompetencyId}`;
+      matchingResources.forEach(resource => {
+        const currentLevel = matchingGap.currentProficiency;
+        const requiredLevel = matchingGap.requiredProficiency;
+        const gapValue = matchingGap.gapValue;
+        const priority = matchingGap.priority;
+        const gapId = matchingGap.id;
 
-      // RECOMMENDATION SCORING FORMULA (Transparent & Deterministic):
-      // 1. Gap Magnitude Factor (0 to 35 pts)
-      const gapPoints = Math.min(35, Math.round(gapValue * 17.5));
+        const currPct = Math.min(100, Math.max(0, Math.round((currentLevel / 5.0) * 100)));
+        const reqPct = Math.min(100, Math.max(0, Math.round((requiredLevel / 5.0) * 100)));
+        const gapPct = Math.max(0, reqPct - currPct);
 
-      // 2. Gap Priority Factor (0 to 30 pts)
-      const priorityWeights: Record<GapPriority, number> = {
-        High: 30,
-        Medium: 20,
-        Low: 10,
-        None: 0,
-      };
-      const priorityPoints = priorityWeights[priority];
+        // RECOMMENDATION SCORING FORMULA (Prioritize larger skill gaps):
+        const matchScore = Math.min(99, Math.max(50, Math.round(gapPct + 25)));
 
-      // 3. Role & Cadre Relevance (0 to 20 pts)
-      // High relevance if the competency is core or critical to official's department
-      let rolePoints = 15;
-      if (profile?.department.toLowerCase().includes('statistical') && resource.domain === 'Statistical') {
-        rolePoints = 20;
-      } else if (profile?.designation.toLowerCase().includes('section officer') && resource.domain === 'Behavioural / Managerial') {
-        rolePoints = 18;
-      }
+        // Phase 5 Requirement: Explain why it is recommended based on user data
+        const whyRecommended: string[] = [
+          `Recommended because your ${matchingGap.competencyName} competency is below the required level.`,
+          `Current Score: ${currPct}% | Required Level: ${reqPct}% | Skill Gap: ${gapPct}%.`,
+          `Curated official civil service learning module by ${resource.provider}.`,
+        ];
 
-      // 4. Proficiency Level Calibration (0 to 15 pts)
-      // Check if target level is a healthy 0.5 to 1.5 step above current proficiency
-      const step = resource.targetProficiencyLevel - currentLevel;
-      const calibrationPoints = (step >= 0.5 && step <= 1.5) ? 15 : (step > 1.5 ? 10 : 8);
+        const suitabilitySummary = `Your current ${matchingGap.competencyName} score (${currPct}%) is below the required role target (${reqPct}%).`;
 
-      const matchScore = Math.min(99, Math.max(45, gapPoints + priorityPoints + rolePoints + calibrationPoints));
+        const recId = `rec-${userId}-${resource.id}`;
 
-      // MULTI-POINT EXPLAINABLE REASONS (Strictly supported by real data)
-      const whyRecommended: string[] = [];
+        const record: RecommendationRecord = {
+          id: recId,
+          userId,
+          resourceId: resource.id,
+          resource,
+          competencyId: resource.primaryCompetencyId,
+          skillGapId: gapId,
+          competencyName: matchingGap.competencyName,
+          domain: matchingGap.domain,
+          currentProficiency: currentLevel,
+          requiredProficiency: requiredLevel,
+          gapValue,
+          priority,
+          matchScore,
+          rank: 1, // calculated after sorting
+          whyRecommended,
+          suitabilitySummary,
+          status: 'RECOMMENDED',
+          generatedAt: now,
+          updatedAt: now,
+        };
 
-      if (gapValue > 0) {
-        whyRecommended.push(`Directly targets your verified ${resource.competencyName} gap of -${gapValue.toFixed(1)} points.`);
-      } else {
-        whyRecommended.push(`Refines your ${resource.competencyName} proficiency to benchmark perfection.`);
-      }
-
-      if (priority === 'High') {
-        whyRecommended.push(`Classified as High Priority requirement for your ${profile?.designation || 'official'} role.`);
-      } else if (priority === 'Medium') {
-        whyRecommended.push(`Core competency identified in ministerial training matrix.`);
-      }
-
-      whyRecommended.push(`Calibrated for current level ${currentLevel.toFixed(1)} to reach benchmark ${resource.targetProficiencyLevel.toFixed(1)}.`);
-      whyRecommended.push(`Official civil service curriculum curated by ${resource.provider}.`);
-
-      const suitabilitySummary = gapValue > 0
-        ? `Addresses an active deficit in ${resource.competencyName} required for ${profile?.designation || 'your role'}.`
-        : `Advanced mastery module for ${resource.competencyName}.`;
-
-      const existing = userRecs!.get(resource.id);
-      const recId = existing ? existing.id : `rec-${userId}-${resource.id}`;
-
-      const record: RecommendationRecord = {
-        id: recId,
-        userId,
-        resourceId: resource.id,
-        resource,
-        competencyId: resource.primaryCompetencyId,
-        skillGapId: gapId,
-        competencyName: resource.competencyName,
-        domain: resource.domain,
-        currentProficiency: currentLevel,
-        requiredProficiency: requiredLevel,
-        gapValue,
-        priority,
-        matchScore,
-        rank: 1, // calculated after sorting
-        whyRecommended,
-        suitabilitySummary,
-        status: existing ? existing.status : 'RECOMMENDED',
-        enrolledAt: existing?.enrolledAt,
-        generatedAt: now,
-        updatedAt: now,
-      };
-
-      calculatedRecords.push(record);
+        calculatedRecords.push(record);
+      });
     });
 
-    // Rank by matchScore descending (High priority & larger gaps naturally rise to top)
-    calculatedRecords.sort((a, b) => {
-      if (b.priority === 'High' && a.priority !== 'High') return 1;
-      if (a.priority === 'High' && b.priority !== 'High') return -1;
-      return b.matchScore - a.matchScore;
-    });
+    // Sort by largest gap value / match score descending (highest skill gap first)
+    calculatedRecords.sort((a, b) => b.gapValue - a.gapValue || b.matchScore - a.matchScore);
 
     // Assign final 1-based ranks and update map
     calculatedRecords.forEach((rec, idx) => {

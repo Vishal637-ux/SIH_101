@@ -28,6 +28,7 @@ import { AssessmentManagementDashboard } from './components/assessments/Assessme
 import { DashboardView } from './components/DashboardView';
 import { Sidebar } from './components/Sidebar';
 import { CrossCuttingFeatures } from './components/CrossCuttingFeatures';
+import { PublicLandingPage } from './components/PublicLandingPage';
 
 export default function App() {
   // Theme state: light theme as requested, matching Karmayogi
@@ -66,6 +67,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('pradnyasetu_isLoggedIn') === 'true';
   });
+  const [publicAuthMode, setPublicAuthMode] = useState<'landing' | 'login' | 'register'>('landing');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
   const [profile, setProfile] = useState<OfficialProfile>(() => {
     const saved = localStorage.getItem('pradnyasetu_profile');
@@ -489,6 +491,7 @@ export default function App() {
     setSelectedContentId(null);
     setActiveView('workflow');
     setCurrentStep(1);
+    setPublicAuthMode('landing');
   };
 
   const handleLogin = () => {
@@ -515,84 +518,95 @@ export default function App() {
         ? 'bg-[#f8fafc] text-slate-900' 
         : 'bg-[#0b1120] text-slate-100'
     }`}>
-      {/* Karmayogi Header */}
-      <Header
-        profile={profile}
-        isLoggedIn={isLoggedIn}
-        theme={theme}
-        setTheme={setTheme}
-        activeNav={getActiveNavId()}
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        onNavigateToDashboard={handleNavigateToDashboard}
-        onOpenProfile={() => handleSelectStep(2)}
-        onLoginClick={() => {
-          handleSelectStep(1);
-          setIsLoggedIn(true);
-        }}
-        onLogoutClick={handleLogout}
-        onNavigateToSkillGaps={() => handleSelectStep(4)}
-        onNavigateToIntegrations={handleNavigateToIntegrations}
-        onNavigateToContent={() => handleNavigateToContent()}
-      />
-
-      {/* Left Navigation Sidebar */}
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        activeNav={getActiveNavId()}
-        theme={theme}
-        profile={profile}
-        isLoggedIn={isLoggedIn}
-        userRole={userRole}
-        onNavigate={(navId) => {
-          if (navId === 'dashboard') handleNavigateToDashboard();
-          else if (navId === 'profile') handleSelectStep(2);
-          else if (navId === 'skills' || navId === 'competency-analytics') handleSelectStep(3);
-          else if (navId === 'skill-gaps' || navId === 'dept-analytics') handleSelectStep(4);
-          else if (navId === 'recommendations') handleSelectStep(5);
-          else if (navId === 'learning' || navId === 'manage-courses' || navId === 'training-programs') handleSelectStep(6);
-          else if (navId === 'assessments' || navId === 'question-bank' || navId === 'assessment-reports') handleSelectStep(7);
-          else if (navId === 'progress' || navId === 'performance' || navId === 'reports') handleSelectStep(9);
-          else if (navId === 'upload-content' || navId === 'ai-content-gen' || navId === 'platform-content') handleNavigateToContent();
-          else if (navId === 'external-integration') handleNavigateToIntegrations();
-          else handleNavigateToDashboard();
-        }}
-        onLogoutClick={handleLogout}
-      />
-
-      {/* Main Content & Workflow Container with Left Sidebar Offset */}
-      <div className={`transition-all duration-300 ${
-        isLoggedIn ? (isSidebarOpen ? 'pl-0 md:pl-64' : 'pl-0 md:pl-16') : 'pl-0'
-      }`}>
-        {/* Workflow Navigation (Contextual Breadcrumb Bar) */}
-        {!showAssessmentsView && !showContentView && !showIntegrationsView && activeView === 'workflow' && (
-          <WorkflowBar
-            currentStep={currentStep}
-            onSelectStep={handleSelectStep}
-            completedSteps={completedSteps}
+      {!isLoggedIn && publicAuthMode === 'landing' ? (
+        <PublicLandingPage
+          onOpenLogin={() => setPublicAuthMode('login')}
+          onOpenRegister={() => setPublicAuthMode('register')}
+          theme={theme}
+        />
+      ) : (
+        <>
+          {/* Karmayogi Header */}
+          <Header
+            profile={profile}
+            isLoggedIn={isLoggedIn}
             theme={theme}
-          />
-        )}
-
-        {/* Main Content Area */}
-        <main className="max-w-7xl mx-auto px-4 py-8">
-        {!isLoggedIn ? (
-          <Step1Login
-            currentProfile={profile}
-            onSelectProfile={(p, selectedRole) => {
-              setProfile(p);
-              setUserRole(selectedRole);
-              setIsLoggedIn(true);
-              localStorage.setItem('pradnyasetu_isLoggedIn', 'true');
-              localStorage.setItem('pradnyasetu_userRole', selectedRole);
-              localStorage.setItem('pradnyasetu_profile', JSON.stringify(p));
-              handleNavigateToDashboard();
+            setTheme={setTheme}
+            activeNav={getActiveNavId()}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            onNavigateToDashboard={handleNavigateToDashboard}
+            onOpenProfile={() => handleSelectStep(2)}
+            onLoginClick={() => {
+              setPublicAuthMode('login');
             }}
-            onNext={handleNext}
-            theme={theme}
+            onLogoutClick={handleLogout}
+            onNavigateToSkillGaps={() => handleSelectStep(4)}
+            onNavigateToIntegrations={handleNavigateToIntegrations}
+            onNavigateToContent={() => handleNavigateToContent()}
           />
-        ) : showAssessmentsView ? (
+
+          {/* Left Navigation Sidebar (Only for logged-in users) */}
+          {isLoggedIn && (
+            <Sidebar
+              isOpen={isSidebarOpen}
+              onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+              activeNav={getActiveNavId()}
+              theme={theme}
+              profile={profile}
+              isLoggedIn={isLoggedIn}
+              userRole={userRole}
+              onNavigate={(navId) => {
+                if (navId === 'dashboard') handleNavigateToDashboard();
+                else if (navId === 'profile') handleSelectStep(2);
+                else if (navId === 'skills' || navId === 'competency-analytics') handleSelectStep(3);
+                else if (navId === 'skill-gaps' || navId === 'dept-analytics') handleSelectStep(4);
+                else if (navId === 'recommendations') handleSelectStep(5);
+                else if (navId === 'learning' || navId === 'manage-courses' || navId === 'training-programs') handleSelectStep(6);
+                else if (navId === 'assessments' || navId === 'question-bank' || navId === 'assessment-reports') handleSelectStep(7);
+                else if (navId === 'progress' || navId === 'performance' || navId === 'reports') handleSelectStep(9);
+                else if (navId === 'upload-content' || navId === 'ai-content-gen' || navId === 'platform-content') handleNavigateToContent();
+                else if (navId === 'external-integration') handleNavigateToIntegrations();
+                else handleNavigateToDashboard();
+              }}
+              onLogoutClick={handleLogout}
+            />
+          )}
+
+          {/* Main Content & Workflow Container with Left Sidebar Offset */}
+          <div className={`transition-all duration-300 ${
+            isLoggedIn ? (isSidebarOpen ? 'pl-0 md:pl-64' : 'pl-0 md:pl-16') : 'pl-0'
+          }`}>
+            {/* Workflow Navigation (Contextual Breadcrumb Bar) */}
+            {isLoggedIn && !showAssessmentsView && !showContentView && !showIntegrationsView && activeView === 'workflow' && (
+              <WorkflowBar
+                currentStep={currentStep}
+                onSelectStep={handleSelectStep}
+                completedSteps={completedSteps}
+                theme={theme}
+              />
+            )}
+
+            {/* Main Content Area */}
+            <main className="max-w-7xl mx-auto px-4 py-8">
+              {!isLoggedIn ? (
+                <Step1Login
+                  currentProfile={profile}
+                  initialMode={publicAuthMode === 'register' ? 'register' : 'login'}
+                  onBackToLanding={() => setPublicAuthMode('landing')}
+                  onSelectProfile={(p, selectedRole) => {
+                    setProfile(p);
+                    setUserRole(selectedRole);
+                    setIsLoggedIn(true);
+                    localStorage.setItem('pradnyasetu_isLoggedIn', 'true');
+                    localStorage.setItem('pradnyasetu_userRole', selectedRole);
+                    localStorage.setItem('pradnyasetu_profile', JSON.stringify(p));
+                    handleNavigateToDashboard();
+                  }}
+                  onNext={handleNext}
+                  theme={theme}
+                />
+              ) : showAssessmentsView ? (
           <AssessmentManagementDashboard
             initialContentId={assessmentTargetContentId}
             onNavigateToLearning={() => {
@@ -770,10 +784,11 @@ export default function App() {
           </>
         )}
 
-        {/* Cross-Cutting Features Footer Section (Rule 16) */}
         <CrossCuttingFeatures theme={theme} />
       </main>
       </div>
+      </>
+      )}
 
       {/* Profile Modal triggered by top-right circle */}
       {isProfileModalOpen && (

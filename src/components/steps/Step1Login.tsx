@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { OfficialProfile } from '../../types';
 import { SAMPLE_PROFILES } from '../../mockData';
-import { LogIn, UserPlus, AlertCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle, CheckCircle2, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { authApi } from '../../services/authApi';
 
 interface Step1LoginProps {
@@ -9,6 +9,8 @@ interface Step1LoginProps {
   onSelectProfile: (profile: OfficialProfile, role: 'Learner' | 'Trainer' | 'Admin') => void;
   onNext: () => void;
   theme: 'light' | 'dark';
+  initialMode?: 'login' | 'register';
+  onBackToLanding?: () => void;
 }
 
 const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
@@ -36,8 +38,14 @@ export const Step1Login: React.FC<Step1LoginProps> = ({
   onSelectProfile,
   onNext,
   theme,
+  initialMode = 'login',
+  onBackToLanding,
 }) => {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  
+  React.useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
   
   // Login State
   const [email, setEmail] = useState('');
@@ -287,6 +295,16 @@ export const Step1Login: React.FC<Step1LoginProps> = ({
 
   return (
     <div className="max-w-md mx-auto space-y-6 pt-2 pb-8">
+      {onBackToLanding && (
+        <button
+          type="button"
+          onClick={onBackToLanding}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-blue-700 transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Public Website</span>
+        </button>
+      )}
       <div className={`p-8 rounded-2xl border shadow-sm ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
