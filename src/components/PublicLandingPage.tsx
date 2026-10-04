@@ -61,7 +61,7 @@ export const PublicLandingPage: React.FC<PublicLandingPageProps> = ({
       {/* HEADER / NAVBAR */}
       <header className="sticky top-1 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             
             {/* Logo & SIH Badge */}
             <div 
@@ -72,10 +72,10 @@ export const PublicLandingPage: React.FC<PublicLandingPageProps> = ({
               <img 
                 src="/logo.png" 
                 alt="PradnyaSetu Logo" 
-                className="h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+                className="h-12 sm:h-16 w-auto object-contain transition-transform group-hover:scale-[1.02]"
               />
-              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
                 SIH26101 • MoSPI
               </div>
             </div>
@@ -792,7 +792,7 @@ export const PublicLandingPage: React.FC<PublicLandingPageProps> = ({
                 <img 
                   src="/logo.png" 
                   alt="PradnyaSetu Logo" 
-                  className="h-9 w-auto bg-white/95 p-1 rounded-md"
+                  className="h-12 sm:h-14 w-auto bg-white/95 p-1 rounded-md"
                 />
               </div>
               <p className="text-xs text-slate-400 max-w-md leading-relaxed">

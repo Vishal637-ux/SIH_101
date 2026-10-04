@@ -88,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
               <img 
                 src="/logo.png" 
                 alt="PradnyaSetu Logo" 
-                className="h-9 sm:h-11 w-auto object-contain"
+                className="h-12 sm:h-15 w-auto object-contain"
               />
             </div>
           </div>
