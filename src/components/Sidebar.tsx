@@ -69,6 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Trainer Sidebar items
   const trainerItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'upload-content', label: 'Upload Content', icon: UploadCloud },
     { id: 'manage-courses', label: 'Manage Courses', icon: BookOpen },
     { id: 'ai-content-gen', label: 'AI Content Generation', icon: Sparkles },
@@ -83,6 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Admin Sidebar items
   const adminItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'user-mgmt', label: 'User Management', icon: Users },
     { id: 'dept-analytics', label: 'Department Analytics', icon: BarChart3 },
     { id: 'competency-analytics', label: 'Competency Analytics', icon: Target },
