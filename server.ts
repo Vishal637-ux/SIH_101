@@ -55,10 +55,14 @@ function authenticateOfficial(req: express.Request, res: express.Response, next:
       };
       return next();
     }
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Invalid or expired authentication token. Please log in again.',
+    });
   }
 
-  // Check fallback for dev IDs or headers if provided (e.g. x-user-id)
-  const headerUserId = req.headers['x-user-id'] ? String(req.headers['x-user-id']).trim() : (token || '');
+  // Check explicit x-user-id header if provided for developer testing
+  const headerUserId = req.headers['x-user-id'] ? String(req.headers['x-user-id']).trim() : '';
   if (headerUserId) {
     const foundUser = authStore.findUserById(headerUserId);
     if (foundUser) {
@@ -72,13 +76,10 @@ function authenticateOfficial(req: express.Request, res: express.Response, next:
     }
   }
 
-  // Fallback for demo session compatibility
-  const fallbackRole = req.headers['x-user-role'] ? String(req.headers['x-user-role']).trim() : 'Learner';
-  (req as any).user = {
-    id: 'off-001',
-    role: fallbackRole === 'Admin' ? 'Admin' : (fallbackRole === 'Trainer' ? 'Trainer' : 'Learner'),
-  };
-  next();
+  return res.status(401).json({
+    error: 'Unauthorized',
+    message: 'Authentication required. Please log in to access this resource.',
+  });
 }
 
 function requireRole(allowedRoles: string[]) {

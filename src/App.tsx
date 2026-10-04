@@ -29,6 +29,7 @@ import { DashboardView } from './components/DashboardView';
 import { Sidebar } from './components/Sidebar';
 import { CrossCuttingFeatures } from './components/CrossCuttingFeatures';
 import { PublicLandingPage } from './components/PublicLandingPage';
+import { authApi } from './services/authApi';
 
 export default function App() {
   // Theme state: light theme as requested, matching Karmayogi
@@ -250,6 +251,30 @@ export default function App() {
   useEffect(() => {
     runGapAnalysis();
   }, [profile.id]);
+
+  // Session token verification on mount/refresh
+  useEffect(() => {
+    const verifySession = async () => {
+      const savedToken = localStorage.getItem('pradnyasetu_auth_token');
+      if (savedToken) {
+        try {
+          const res = await authApi.getCurrentUser(savedToken);
+          if (res.user) {
+            setIsLoggedIn(true);
+            setUserRole(res.user.role);
+            localStorage.setItem('pradnyasetu_isLoggedIn', 'true');
+            localStorage.setItem('pradnyasetu_userRole', res.user.role);
+            localStorage.setItem('pradnyasetu_user', JSON.stringify(res.user));
+          } else {
+            handleLogout();
+          }
+        } catch {
+          handleLogout();
+        }
+      }
+    };
+    verifySession();
+  }, []);
 
   // Route support for /skill-gaps, /recommendations, /integrations, /learning, and /content directly
   useEffect(() => {
